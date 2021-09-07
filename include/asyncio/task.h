@@ -4,9 +4,10 @@
 
 #ifndef ASYNCIO_TASK_H
 #define ASYNCIO_TASK_H
+#include <asyncio/asyncio_ns.h>
 #include <coroutine>
-#include <concepts>
 
+ASYNCIO_NS_BEGIN
 template<typename R>
 struct Task {
     struct promise_type;
@@ -18,29 +19,32 @@ struct Task {
         auto final_suspend() noexcept { return std::suspend_never{}; }
         void unhandled_exception() { std::terminate(); }
         Task get_return_object() {
-            return { coro_handle::from_promise(*this) };
+            return {coro_handle::from_promise(*this)};
         }
 
         template<class U>
-        void return_value(U&& result) {
+        void return_value(U &&result) {
             result_ = std::forward<U>(result);
         }
 
-        R& get_result() { return result_; }
+        R &get_result() { return result_; }
 
     private:
         template<typename U>
         struct awaiter {
             bool await_ready() { return false; }
+
             template<typename P>
             void await_suspend(P) {
-                if (! continuation_.handle_.done()) {
+                if (!continuation_.handle_.done()) {
                     continuation_.handle_.resume();
                 }
             }
+
             U await_resume() {
                 return continuation_.handle_.promise().get_result();
             }
+
             Task<U> continuation_;
         };
 
@@ -57,5 +61,5 @@ struct Task {
 
     coro_handle handle_;
 };
-
+ASYNCIO_NS_END
 #endif // ASYNCIO_TASK_H

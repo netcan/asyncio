@@ -1,11 +1,21 @@
 cmake_minimum_required(VERSION 3.20)
 project(asyncio)
-find_package(fmt)
-
-set(ASYNCIO_SRCS include/asyncio/task.h)
-
-include_directories(${CMAKE_SOURCE_DIR}/include)
 set(CMAKE_CXX_STANDARD 20)
 
-add_executable(hello_world test/st/hello_world.cpp ${AYNCIO_SRCS})
-target_link_libraries(hello_world fmt::fmt)
+find_package(fmt)
+
+set(ASYNCIO_INC
+        include/asyncio/asyncio_ns.h
+        include/asyncio/task.h
+        include/asyncio/event_loop.h
+        include/asyncio/runner.h
+        )
+
+include_directories(${CMAKE_SOURCE_DIR}/include)
+
+add_library(asyncio
+        ${ASYNC_INC}
+        src/event_loop.cpp)
+
+add_executable(hello_world test/st/hello_world.cpp ${AYNCIO_INC})
+target_link_libraries(hello_world asyncio fmt::fmt)
