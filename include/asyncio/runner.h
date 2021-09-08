@@ -4,14 +4,14 @@
 
 #ifndef ASYNCIO_RUNNER_H
 #define ASYNCIO_RUNNER_H
-#include <asyncio/asyncio_ns.h>
+#include <asyncio/concept.h>
+#include <asyncio/event_loop.h>
 
 ASYNCIO_NS_BEGIN
-template<typename CORO>
+template<concepts::Coroutine CORO>
 void run(CORO&& main) {
-    while (! main.handle_.done()) {
-        main.handle_.resume();
-    }
+    decltype(auto) loop = get_event_loop();
+    return loop.run_until_complete(std::forward<CORO>(main));
 }
 
 ASYNCIO_NS_END
