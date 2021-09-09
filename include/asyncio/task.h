@@ -5,6 +5,7 @@
 #ifndef ASYNCIO_TASK_H
 #define ASYNCIO_TASK_H
 #include <asyncio/resumable.h>
+#include <asyncio/future.h>
 #include <coroutine>
 #include <memory>
 
@@ -71,5 +72,7 @@ struct Task {
 
     coro_handle handle_;
 };
+
+Future<int> sleep(double delay);
 ASYNCIO_NS_END
 #endif // ASYNCIO_TASK_H

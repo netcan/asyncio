@@ -1,4 +1,5 @@
-cmake-build-*
+/build
+/cmake-build-*
 .idea
 *.out
 tt.py

@@ -21,7 +21,10 @@ void EventLoop::run_once() {
         while (! handle->done())
             handle->resume();
     }
+}
 
+Future<void> EventLoop::create_future() {
+    co_return;
 }
 
 ASYNCIO_NS_END

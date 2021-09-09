@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.18)
 project(asyncio)
 set(CMAKE_CXX_STANDARD 20)
 
@@ -12,13 +12,14 @@ set(ASYNCIO_INC
         include/asyncio/event_loop.h
         include/asyncio/runner.h
         include/asyncio/resumable.h
+        include/asyncio/concept.h include/asyncio/noncopyable.h include/asyncio/future.h
         )
 
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
 add_library(asyncio STATIC
         ${ASYNC_INC}
-        src/event_loop.cpp include/asyncio/concept.h include/asyncio/noncopyable.h)
+        src/event_loop.cpp src/task.cpp)
 
 add_executable(hello_world test/st/hello_world.cpp ${AYNCIO_INC})
 target_link_libraries(hello_world asyncio fmt::fmt)

@@ -7,6 +7,7 @@
 #include <asyncio/resumable.h>
 #include <asyncio/noncopyable.h>
 #include <asyncio/concept.h>
+#include <asyncio/future.h>
 #include <queue>
 #include <memory>
 
@@ -17,6 +18,9 @@ struct EventLoop: private NonCopyable {
         ready_.template emplace(future.get_resumable());
         run_forever();
     }
+
+    Future<void> create_future();
+
 
     void run_forever();
 
