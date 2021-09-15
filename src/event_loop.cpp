@@ -1,7 +1,7 @@
 //
 // Created by netcan on 2021/09/07.
 //
-
+#include <chrono>
 #include <asyncio/event_loop.h>
 
 ASYNCIO_NS_BEGIN
@@ -12,6 +12,9 @@ EventLoop& get_event_loop() {
 
 void EventLoop::run_forever() {
     run_once();
+}
+
+void EventLoop::call_at(TimeDuration::rep when, std::unique_ptr<resumable> callback) {
 }
 
 void EventLoop::run_once() {

@@ -3,7 +3,7 @@
 //
 #include <asyncio/task.h>
 ASYNCIO_NS_BEGIN
-//Future<int> sleep(double delay) {
-//
-//}
+Future<int> sleep(double delay) {
+
+}
 ASYNCIO_NS_END
