@@ -13,22 +13,22 @@
 
 ASYNCIO_NS_BEGIN
 class EventLoop: private NonCopyable {
-    using TimeDuration = std::chrono::milliseconds;
+    using MSDuration = std::chrono::milliseconds;
 
 public:
     EventLoop() {
         using namespace std::chrono;
         auto now = system_clock::now();
-        start_time_ = duration_cast<TimeDuration>(now.time_since_epoch()).count();
+        start_time_ = duration_cast<MSDuration>(now.time_since_epoch()).count();
     }
 
-    TimeDuration::rep time() {
+    MSDuration::rep time() {
         using namespace std::chrono;
         auto now = system_clock::now();
-        return duration_cast<TimeDuration>(now.time_since_epoch()).count() - start_time_;
+        return duration_cast<MSDuration>(now.time_since_epoch()).count() - start_time_;
     }
 
-    void call_at(TimeDuration::rep when, std::unique_ptr<resumable> callback);
+    void call_at(MSDuration::rep when, std::unique_ptr<resumable> callback);
 
     template<concepts::Coroutine CORO>
     void run_until_complete(CORO&& future) {
@@ -44,11 +44,12 @@ private:
     void run_once();
 
 private:
-    TimeDuration::rep start_time_;
+    MSDuration::rep start_time_;
 
 private:
     std::queue<std::unique_ptr<resumable>> ready_;
-    std::vector<std::unique_ptr<resumable>> schedule_; // min time heap
+    using TimerHandle = std::pair<MSDuration::rep, std::unique_ptr<resumable>>;
+    std::vector<TimerHandle> schedule_; // min time heap
 };
 
 EventLoop& get_event_loop();
