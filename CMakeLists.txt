@@ -19,7 +19,7 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 
 add_library(asyncio STATIC
         ${ASYNC_INC}
-        src/event_loop.cpp src/task.cpp)
+        src/event_loop.cpp src/task.cpp include/asyncio/epoll_selector.h)
 
 add_executable(hello_world test/st/hello_world.cpp ${AYNCIO_INC})
 target_link_libraries(hello_world asyncio fmt::fmt)
