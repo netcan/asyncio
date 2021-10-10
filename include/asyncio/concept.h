@@ -4,14 +4,14 @@
 
 #ifndef ASYNCIO_CONCEPT_H
 #define ASYNCIO_CONCEPT_H
-#include <asyncio/resumable.h>
+#include <asyncio/handle.h>
 #include <concepts>
 
 ASYNCIO_NS_BEGIN
 namespace concepts {
 template<typename CORO>
 concept Coroutine = requires(CORO coro) {
-    { *coro.get_resumable() } -> std::convertible_to<resumable&>;
+    { *coro.get_resumable() } -> std::convertible_to<Handle&>;
 };
 
 };

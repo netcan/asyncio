@@ -4,30 +4,36 @@
 
 #ifndef ASYNCIO_TASK_H
 #define ASYNCIO_TASK_H
-#include <asyncio/resumable.h>
-#include <asyncio/future.h>
+#include <asyncio/handle.h>
+#include <asyncio/event_loop.h>
 #include <coroutine>
 #include <memory>
 
 ASYNCIO_NS_BEGIN
+
+struct CoroHandle: Handle {
+    CoroHandle(std::coroutine_handle<> handle): handle_(handle) {}
+    void run() override { return handle_.resume(); }
+    ~CoroHandle() override {
+        if (handle_.done()) { handle_.destroy(); }
+    }
+private:
+    std::coroutine_handle<> handle_;
+};
+
+///////////////////////////////////////////////////////////////////////////////
 template<typename R>
 struct Task {
     struct promise_type;
     using coro_handle = std::coroutine_handle<promise_type>;
 
-    std::unique_ptr<resumable> get_resumable() {
-        struct coro_handle_resumer: resumable {
-            coro_handle_resumer(coro_handle handle): handle_(handle) {}
-            void resume() override { return handle_.resume(); }
-            bool done() override { return handle_.done(); }
-            coro_handle handle_;
-        };
-        return std::make_unique<coro_handle_resumer>(handle_);
+    std::unique_ptr<Handle> get_resumable() {
+        return std::make_unique<CoroHandle>(handle_);
     }
 
     struct promise_type {
         auto initial_suspend() { return std::suspend_always{}; }
-        auto final_suspend() noexcept { return std::suspend_never{}; }
+        auto final_suspend() noexcept { return std::suspend_always{}; }
         void unhandled_exception() { std::terminate(); }
         Task get_return_object() {
             return {coro_handle::from_promise(*this)};
@@ -41,38 +47,25 @@ struct Task {
         R &get_result() { return result_; }
 
     private:
-        template<typename U>
-        struct awaiter {
-            bool await_ready() { return false; }
-
-            template<typename P>
-            void await_suspend(P) {
-                if (!continuation_.handle_.done()) {
-                    continuation_.handle_.resume();
-                }
-            }
-
-            U await_resume() {
-                return continuation_.handle_.promise().get_result();
-            }
-
-            Task<U> continuation_;
-        };
-
-    public:
-        template<class Cont>
-        auto await_transform(Cont continuation) {
-            return awaiter{continuation};
-        }
-
-    private:
-
         R result_;
     };
 
     coro_handle handle_;
 };
 
-Future<int> sleep(double delay);
+///////////////////////////////////////////////////////////////////////////////
+auto sleep(double delay /* second */) {
+    struct Sleep {
+        constexpr bool await_ready() { return false; }
+        constexpr void await_resume() const noexcept {}
+        void await_suspend(std::coroutine_handle<> co_handle) const noexcept {
+            auto& loop = get_event_loop();
+            loop.call_at(loop.time() + delay_ * 1000,
+                         std::make_unique<CoroHandle>(co_handle));
+        }
+        double delay_;
+    };
+    return Sleep {delay};
+}
 ASYNCIO_NS_END
 #endif // ASYNCIO_TASK_H

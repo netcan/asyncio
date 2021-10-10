@@ -3,10 +3,12 @@
 //
 #ifndef ASYNCIO_EVENT_LOOP_H
 #define ASYNCIO_EVENT_LOOP_H
-#include <asyncio/resumable.h>
+#include <asyncio/handle.h>
 #include <asyncio/noncopyable.h>
 #include <asyncio/concept.h>
-#include <asyncio/future.h>
+#include <asyncio/epoll_selector.h>
+#include <utility>
+#include <algorithm>
 #include <queue>
 #include <chrono>
 #include <memory>
@@ -28,15 +30,20 @@ public:
         return duration_cast<MSDuration>(now.time_since_epoch()).count() - start_time_;
     }
 
-    void call_at(MSDuration::rep when, std::unique_ptr<resumable> callback);
+    bool is_stop() {
+        return schedule_.empty() && ready_.empty();
+    }
+
+    void call_at(MSDuration::rep when, std::unique_ptr<Handle> callback) {
+        schedule_.emplace_back(std::make_pair(when, std::move(callback)));
+        std::ranges::push_heap(schedule_, std::ranges::greater{}, &TimerHandle::first);
+    }
 
     template<concepts::Coroutine CORO>
     void run_until_complete(CORO&& future) {
         ready_.template emplace(future.get_resumable());
         run_forever();
     }
-
-    Future<void> create_future();
 
     void run_forever();
 
@@ -45,10 +52,9 @@ private:
 
 private:
     MSDuration::rep start_time_;
-
-private:
-    std::queue<std::unique_ptr<resumable>> ready_;
-    using TimerHandle = std::pair<MSDuration::rep, std::unique_ptr<resumable>>;
+    std::queue<std::unique_ptr<Handle>> ready_;
+    EpollSelector selector_;
+    using TimerHandle = std::pair<MSDuration::rep, std::unique_ptr<Handle>>;
     std::vector<TimerHandle> schedule_; // min time heap
 };
 

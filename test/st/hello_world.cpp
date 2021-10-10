@@ -9,6 +9,7 @@
 #include <asyncio/runner.h>
 using namespace ASYNCIO_NS;
 
+#if false
 Task<std::string_view> world() {
     co_return "world";
 }
@@ -22,6 +23,14 @@ Task<std::string> hello_world() {
     auto w = co_await world();
     fmt::print("{} {}", h, w);
     co_return fmt::format("{} {}", h, w);
+}
+#endif
+
+Task<int> hello_world() {
+    fmt::print("hello here 1\n");
+    co_await asyncio::sleep(1);
+    fmt::print("hello here 2\n");
+    co_return 2;
 }
 
 int main() {

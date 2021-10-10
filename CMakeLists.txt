@@ -12,10 +12,9 @@ set(ASYNCIO_INC
         include/asyncio/task.h
         include/asyncio/event_loop.h
         include/asyncio/runner.h
-        include/asyncio/resumable.h
+        include/asyncio/handle.h
         include/asyncio/concept.h
         include/asyncio/noncopyable.h
-        include/asyncio/future.h
         include/asyncio/epoll_selector.h
         )
 
