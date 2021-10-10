@@ -7,8 +7,7 @@
 #include <string>
 #include <asyncio/task.h>
 #include <asyncio/runner.h>
-
-using namespace asyncio;
+using namespace ASYNCIO_NS;
 
 Task<std::string_view> world() {
     co_return "world";
