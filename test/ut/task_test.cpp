@@ -8,6 +8,17 @@
 using namespace ASYNCIO_NS;
 
 struct Dummy {};
+
+template<size_t N>
+Task<Dummy> coro_depth_n(std::vector<int>& result) {
+    result.push_back(N);
+    if constexpr (N > 0) {
+        co_await coro_depth_n<N - 1>(result);
+        result.push_back(N * 10);
+    }
+}
+
+#if false
 Task<Dummy> coro1(std::vector<int>& result) {
     result.push_back(1);
     co_return Dummy {};
@@ -40,37 +51,38 @@ Task<Dummy> coro5(std::vector<int>& result) {
     result.push_back(50);
     co_return Dummy {};
 }
+#endif
 
 SCENARIO("test Task await") {
     std::vector<int> result;
     EventLoop& loop = get_event_loop();
     GIVEN("simple await") {
-        loop.run_until_complete(coro1(result));
-        std::vector<int> expected { 1 };
+        loop.run_until_complete(coro_depth_n<0>(result));
+        std::vector<int> expected { 0 };
         REQUIRE(result == expected);
     }
 
     GIVEN("nest await") {
-        loop.run_until_complete(coro2(result));
-        std::vector<int> expected { 2, 1, 20 };
+        loop.run_until_complete(coro_depth_n<1>(result));
+        std::vector<int> expected { 1, 0, 10 };
         REQUIRE(result == expected);
     }
 
     GIVEN("3 depth await") {
-        loop.run_until_complete(coro3(result));
-        std::vector<int> expected { 3, 2, 1, 20, 30 };
+        loop.run_until_complete(coro_depth_n<2>(result));
+        std::vector<int> expected { 2, 1, 0, 10, 20 };
         REQUIRE(result == expected);
     }
 
     GIVEN("4 depth await") {
-        loop.run_until_complete(coro4(result));
-        std::vector<int> expected { 4, 3, 2, 1, 20, 30, 40 };
+        loop.run_until_complete(coro_depth_n<3>(result));
+        std::vector<int> expected { 3, 2, 1, 0, 10, 20, 30 };
         REQUIRE(result == expected);
     }
 
     GIVEN("5 depth await") {
-        loop.run_until_complete(coro5(result));
-        std::vector<int> expected { 5, 4, 3, 2, 1, 20, 30, 40, 50 };
+        loop.run_until_complete(coro_depth_n<4>(result));
+        std::vector<int> expected { 4, 3, 2, 1, 0, 10, 20, 30, 40 };
         REQUIRE(result == expected);
     }
 
