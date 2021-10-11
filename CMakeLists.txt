@@ -25,3 +25,4 @@ add_library(asyncio STATIC
         src/event_loop.cpp src/task.cpp)
 
 add_subdirectory(test)
+add_subdirectory(third_party)

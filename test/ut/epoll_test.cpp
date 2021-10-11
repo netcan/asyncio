@@ -1,7 +1,7 @@
 //
 // Created by netcan on 2021/10/10.
 //
-#include <catch2/catch.hpp>
+#include <catch2/catch_test_macros.hpp>
 #include <asyncio/event_loop.h>
 #include <asyncio/epoll_selector.h>
 
