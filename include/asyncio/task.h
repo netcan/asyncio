@@ -31,6 +31,36 @@ struct Task {
         return std::make_unique<CoroHandle>(handle_);
     }
 
+    auto operator co_await() {
+        struct Awaiter {
+            constexpr bool await_ready() { return false; }
+            R await_resume() const noexcept {
+                // TODO: fill Result value
+                return R{};
+            }
+            void await_suspend(std::coroutine_handle<> caller) const noexcept {
+                struct CallAndReturn: Handle {
+                    CallAndReturn(coro_handle self, std::coroutine_handle<> caller):
+                            self_(self), caller_(caller) {}
+                    void run() override {
+                        self_.resume();
+                        loop_.call_soon(std::make_unique<CoroHandle>(caller_));
+                    }
+                    ~CallAndReturn() override {
+                        if (self_.done()) { self_.destroy(); }
+                    }
+                    coro_handle self_;
+                    std::coroutine_handle<> caller_ {};
+                    EventLoop& loop_{get_event_loop()};
+                };
+                loop_.call_soon(std::make_unique<CallAndReturn>(self_, caller));
+            }
+            coro_handle self_ {};
+            EventLoop& loop_{get_event_loop()};
+        };
+        return Awaiter {handle_};
+    }
+
     struct promise_type {
         auto initial_suspend() { return std::suspend_always{}; }
         auto final_suspend() noexcept { return std::suspend_always{}; }
@@ -58,10 +88,10 @@ auto sleep(double delay /* second */) {
     struct Sleep {
         constexpr bool await_ready() { return false; }
         constexpr void await_resume() const noexcept {}
-        void await_suspend(std::coroutine_handle<> co_handle) const noexcept {
+        void await_suspend(std::coroutine_handle<> caller) const noexcept {
             auto& loop = get_event_loop();
             loop.call_at(loop.time() + delay_ * 1000,
-                         std::make_unique<CoroHandle>(co_handle));
+                         std::make_unique<CoroHandle>(caller));
         }
         double delay_;
     };

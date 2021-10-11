@@ -39,9 +39,13 @@ public:
         std::ranges::push_heap(schedule_, std::ranges::greater{}, &TimerHandle::first);
     }
 
+    void call_soon(std::unique_ptr<Handle> callback) {
+        ready_.emplace(std::move(callback));
+    }
+
     template<concepts::Coroutine CORO>
     void run_until_complete(CORO&& future) {
-        ready_.template emplace(future.get_resumable());
+        call_soon(future.get_resumable());
         run_forever();
     }
 

@@ -1,4 +1,4 @@
-add_executable(asyncio_ut epoll_test.cpp)
+add_executable(asyncio_ut epoll_test.cpp task_test.cpp)
 target_link_libraries(asyncio_ut Catch2WithMain asyncio)
 
 #include(CTest)
