@@ -34,6 +34,13 @@ Task<Dummy> coro4(std::vector<int>& result) {
     co_return Dummy {};
 }
 
+Task<Dummy> coro5(std::vector<int>& result) {
+    result.push_back(5);
+    co_await coro4(result);
+    result.push_back(50);
+    co_return Dummy {};
+}
+
 SCENARIO("test Task await") {
     std::vector<int> result;
     EventLoop& loop = get_event_loop();
@@ -58,6 +65,12 @@ SCENARIO("test Task await") {
     GIVEN("4 depth await") {
         loop.run_until_complete(coro4(result));
         std::vector<int> expected { 4, 3, 2, 1, 20, 30, 40 };
+        REQUIRE(result == expected);
+    }
+
+    GIVEN("5 depth await") {
+        loop.run_until_complete(coro5(result));
+        std::vector<int> expected { 5, 4, 3, 2, 1, 20, 30, 40, 50 };
         REQUIRE(result == expected);
     }
 
