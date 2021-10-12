@@ -39,31 +39,31 @@ struct Task {
                 return R{};
             }
             void await_suspend(std::coroutine_handle<> caller) const noexcept {
-                struct CallAndReturn: Handle {
-                    CallAndReturn(coro_handle self, std::coroutine_handle<> caller):
-                            self_(self), caller_(caller) {}
-                    void run() override {
-                        self_.resume();
-                        loop_.call_soon(std::make_unique<CoroHandle>(caller_));
-                    }
-                    ~CallAndReturn() override {
-                        if (self_.done()) { self_.destroy(); }
-                    }
-                    coro_handle self_;
-                    std::coroutine_handle<> caller_ {};
-                    EventLoop& loop_{get_event_loop()};
-                };
-                loop_.call_soon(std::make_unique<CallAndReturn>(self_, caller));
+                self_coro_.promise().continuation_ = caller;
+                loop_.call_soon(std::make_unique<CoroHandle>(self_coro_));
             }
-            coro_handle self_ {};
+            coro_handle self_coro_ {};
             EventLoop& loop_{get_event_loop()};
         };
         return Awaiter {handle_};
     }
 
     struct promise_type {
-        auto initial_suspend() { return std::suspend_always{}; }
-        auto final_suspend() noexcept { return std::suspend_always{}; }
+        auto initial_suspend() noexcept { return std::suspend_always{}; }
+        struct final_awaiter {
+            constexpr bool await_ready() const noexcept { return false; }
+            template<typename Promise>
+            constexpr void await_suspend(std::coroutine_handle<Promise> h) const noexcept {
+                if (auto cont = h.promise().continuation_) {
+                    EventLoop& loop_{get_event_loop()};
+                    loop_.call_soon(std::make_unique<CoroHandle>(cont));
+                }
+            }
+            constexpr void await_resume() const noexcept {}
+        };
+        auto final_suspend() noexcept {
+            return final_awaiter {};
+        }
         void unhandled_exception() { std::terminate(); }
         Task get_return_object() {
             return {coro_handle::from_promise(*this)};
@@ -76,8 +76,8 @@ struct Task {
 
         R &get_result() { return result_; }
 
-    private:
         R result_;
+        std::coroutine_handle<> continuation_;
     };
 
     coro_handle handle_;
