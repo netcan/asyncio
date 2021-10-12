@@ -85,5 +85,25 @@ SCENARIO("test Task await") {
         std::vector<int> expected { 4, 3, 2, 1, 0, 10, 20, 30, 40 };
         REQUIRE(result == expected);
     }
+}
 
+Task<int> square(int x) {
+    co_return x * x;
+}
+
+Task<int> square_sum(int x, int y, int& result) {
+    auto x2 = co_await square(x);
+    auto y2 = co_await square(y);
+    fmt::print("x2 = {} y2 = {}", x2, y2);
+    result = x2 + y2;
+    co_return x2 + y2;
+}
+
+SCENARIO("test Task await result value") {
+    EventLoop& loop = get_event_loop();
+    GIVEN("square_sum 3, 4") {
+        int result;
+        loop.run_until_complete(square_sum(3, 4, result));
+        REQUIRE(result == 25);
+    }
 }
