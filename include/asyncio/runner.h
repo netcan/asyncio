@@ -8,10 +8,10 @@
 #include <asyncio/event_loop.h>
 
 ASYNCIO_NS_BEGIN
-template<concepts::Coroutine CORO>
-void run(CORO&& main) {
+template<concepts::Future Fut>
+void run(Fut && main) {
     decltype(auto) loop = get_event_loop();
-    return loop.run_until_complete(std::forward<CORO>(main));
+    return loop.run_until_complete(std::forward<Fut>(main));
 }
 
 ASYNCIO_NS_END

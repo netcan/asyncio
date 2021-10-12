@@ -35,6 +35,10 @@ struct Task: private NonCopyable {
         if (handle_) { handle_.destroy(); }
     }
 
+    R get_result() {
+        return handle_.promise().result_;
+    }
+
     auto operator co_await() && noexcept {
         struct Awaiter {
             constexpr bool await_ready() { return false; }
@@ -76,8 +80,6 @@ struct Task: private NonCopyable {
         void return_value(U &&result) noexcept {
             result_ = std::forward<U>(result);
         }
-
-        R &get_result() { return result_; }
 
         R result_;
         std::coroutine_handle<> continuation_;

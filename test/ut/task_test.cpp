@@ -4,6 +4,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <asyncio/event_loop.h>
 #include <asyncio/task.h>
+#include <functional>
 
 using namespace ASYNCIO_NS;
 
@@ -87,23 +88,31 @@ SCENARIO("test Task await") {
     }
 }
 
-Task<int> square(int x) {
-    co_return x * x;
-}
-
-Task<int> square_sum(int x, int y, int& result) {
-    auto x2 = co_await square(x);
-    auto y2 = co_await square(y);
-    fmt::print("x2 = {} y2 = {}", x2, y2);
-    result = x2 + y2;
-    co_return x2 + y2;
-}
-
 SCENARIO("test Task await result value") {
     EventLoop& loop = get_event_loop();
     GIVEN("square_sum 3, 4") {
-        int result;
-        loop.run_until_complete(square_sum(3, 4, result));
-        REQUIRE(result == 25);
+        auto square = [](int x) -> Task<int> {
+            co_return x * x;
+        };
+
+        auto square_sum = [&](int x, int y) -> Task<int> {
+            auto x2 = co_await square(x);
+            auto y2 = co_await square(y);
+            co_return x2 + y2;
+        };
+        REQUIRE(loop.run_until_complete(square_sum(3, 4)) == 25);
+    }
+
+    GIVEN("fibonacci") {
+        std::function<auto(size_t) -> Task<size_t>> fibo =
+            [&](size_t n) -> Task<size_t> {
+                if (n <= 1) co_return n;
+                co_return co_await fibo(n - 1) +
+                          co_await fibo(n - 2);
+            };
+        REQUIRE(loop.run_until_complete(fibo(0)) == 0);
+        REQUIRE(loop.run_until_complete(fibo(1)) == 1);
+        REQUIRE(loop.run_until_complete(fibo(2)) == 1);
+        REQUIRE(loop.run_until_complete(fibo(12)) == 144);
     }
 }

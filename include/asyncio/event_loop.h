@@ -43,10 +43,11 @@ public:
         ready_.emplace(std::move(callback));
     }
 
-    template<concepts::Coroutine CORO>
-    void run_until_complete(CORO&& future) {
+    template<concepts::Future Fut>
+    auto run_until_complete(Fut&& future) {
         call_soon(future.get_resumable());
         run_forever();
+        return future.get_result();
     }
 
     void run_forever();
