@@ -5,7 +5,7 @@
 #ifndef ASYNCIO_EPOLL_SELECTOR_H
 #define ASYNCIO_EPOLL_SELECTOR_H
 #include <asyncio/asyncio_ns.h>
-#include <asyncio/event.h>
+#include <asyncio/selector/event.h>
 #include <unistd.h>
 #include <sys/epoll.h>
 #include <vector>

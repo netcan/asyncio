@@ -19,7 +19,7 @@ private:
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-template<typename R>
+template<typename R = void>
 struct Task: private NonCopyable {
     struct promise_type;
     using coro_handle = std::coroutine_handle<promise_type>;
@@ -36,17 +36,17 @@ struct Task: private NonCopyable {
     }
 
     R get_result() {
-        return handle_.promise().result_;
+        return handle_.promise().result();
     }
 
     auto operator co_await() && noexcept {
         struct Awaiter {
             constexpr bool await_ready() { return false; }
             R await_resume() const noexcept {
-                return self_coro_.promise().result_;
+                return self_coro_.promise().result();
             }
-            void await_suspend(std::coroutine_handle<> caller) const noexcept {
-                self_coro_.promise().continuation_ = caller;
+            void await_suspend(std::coroutine_handle<> resumer) const noexcept {
+                self_coro_.promise().continuation_ = resumer;
                 EventLoop& loop_{get_event_loop()};
                 loop_.call_soon(std::make_unique<CoroHandle>(self_coro_));
             }
@@ -55,7 +55,26 @@ struct Task: private NonCopyable {
         return Awaiter {handle_};
     }
 
-    struct promise_type {
+    struct promise_result {
+        template<class U>
+        void return_value(U &&result) noexcept {
+            result_ = std::forward<U>(result);
+        }
+        R& result() noexcept { return result_; }
+    private:
+        R result_;
+    };
+
+    struct promise_void_result {
+        constexpr void return_void() noexcept {}
+        constexpr void result() noexcept {}
+    };
+
+    using PromiseResult = std::conditional_t<std::is_void_v<R>
+            , promise_void_result
+            , promise_result>;
+
+    struct promise_type: PromiseResult {
         auto initial_suspend() noexcept { return std::suspend_always{}; }
         struct final_awaiter {
             constexpr bool await_ready() const noexcept { return false; }
@@ -76,12 +95,6 @@ struct Task: private NonCopyable {
             return Task{coro_handle::from_promise(*this)};
         }
 
-        template<class U>
-        void return_value(U &&result) noexcept {
-            result_ = std::forward<U>(result);
-        }
-
-        R result_;
         std::coroutine_handle<> continuation_;
     };
 

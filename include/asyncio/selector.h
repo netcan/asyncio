@@ -6,7 +6,7 @@
 #define ASYNCIO_SELECTOR_H
 
 #if defined(__APPLE__)
-#include <asyncio/kqueue_selector.h>
+#include <asyncio/selector/kqueue_selector.h>
 namespace ASYNCIO_NS {
 using Selector = KQueueSelector;
 }

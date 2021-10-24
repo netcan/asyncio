@@ -8,51 +8,14 @@
 
 using namespace ASYNCIO_NS;
 
-struct Dummy {};
-
 template<size_t N>
-Task<Dummy> coro_depth_n(std::vector<int>& result) {
+Task<> coro_depth_n(std::vector<int>& result) {
     result.push_back(N);
     if constexpr (N > 0) {
         co_await coro_depth_n<N - 1>(result);
         result.push_back(N * 10);
     }
 }
-
-#if false
-Task<Dummy> coro1(std::vector<int>& result) {
-    result.push_back(1);
-    co_return Dummy {};
-}
-
-Task<Dummy> coro2(std::vector<int>& result) {
-    result.push_back(2);
-    co_await coro1(result);
-    result.push_back(20);
-    co_return Dummy {};
-}
-
-Task<Dummy> coro3(std::vector<int>& result) {
-    result.push_back(3);
-    co_await coro2(result);
-    result.push_back(30);
-    co_return Dummy {};
-}
-
-Task<Dummy> coro4(std::vector<int>& result) {
-    result.push_back(4);
-    co_await coro3(result);
-    result.push_back(40);
-    co_return Dummy {};
-}
-
-Task<Dummy> coro5(std::vector<int>& result) {
-    result.push_back(5);
-    co_await coro4(result);
-    result.push_back(50);
-    co_return Dummy {};
-}
-#endif
 
 SCENARIO("test Task await") {
     std::vector<int> result;
@@ -88,13 +51,14 @@ SCENARIO("test Task await") {
     }
 }
 
+
+Task<int64_t> square(int64_t x) {
+    co_return x * x;
+}
+
 SCENARIO("test Task await result value") {
     EventLoop& loop = get_event_loop();
     GIVEN("square_sum 3, 4") {
-        auto square = [](int x) -> Task<int> {
-            co_return x * x;
-        };
-
         auto square_sum = [&](int x, int y) -> Task<int> {
             auto x2 = co_await square(x);
             auto y2 = co_await square(y);
@@ -115,4 +79,23 @@ SCENARIO("test Task await result value") {
         REQUIRE(loop.run_until_complete(fibo(2)) == 1);
         REQUIRE(loop.run_until_complete(fibo(12)) == 144);
     }
+}
+
+SCENARIO("test Task for loop") {
+    EventLoop& loop = get_event_loop();
+
+    auto sequense = [](int64_t n) -> Task<int64_t> {
+        int64_t result = 1;
+        int64_t sign = -1;
+        for (size_t i = 2; i <= n; ++i) {
+            result += (co_await square(i)) * sign;
+            sign *= -1;
+        }
+        co_return result;
+    };
+
+    REQUIRE(loop.run_until_complete(sequense(1)) == 1);
+    REQUIRE(loop.run_until_complete(sequense(10)) == -55);
+    REQUIRE(loop.run_until_complete(sequense(100)) == -5050);
+    REQUIRE(loop.run_until_complete(sequense(100000)) == -5000050000);
 }
