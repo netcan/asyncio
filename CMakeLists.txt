@@ -16,6 +16,7 @@ set(ASYNCIO_INC
         include/asyncio/concept.h
         include/asyncio/noncopyable.h
         include/asyncio/epoll_selector.h
+        include/asyncio/kqueue_selector.h include/asyncio/event.h include/asyncio/selector.h
         )
 
 include_directories(${CMAKE_SOURCE_DIR}/include)

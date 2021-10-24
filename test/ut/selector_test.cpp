@@ -3,13 +3,13 @@
 //
 #include <catch2/catch_test_macros.hpp>
 #include <asyncio/event_loop.h>
-#include <asyncio/epoll_selector.h>
+#include <asyncio/Selector.h>
 
 using namespace ASYNCIO_NS;
 
-SCENARIO("test epoll wait") {
+SCENARIO("test selector wait") {
     EventLoop loop;
-    EpollSelector selector;
+    Selector selector;
     int before_wait = loop.time();
     selector.select(300);
     int after_wait = loop.time();

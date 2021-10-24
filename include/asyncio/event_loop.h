@@ -6,7 +6,7 @@
 #include <asyncio/handle.h>
 #include <asyncio/noncopyable.h>
 #include <asyncio/concept.h>
-#include <asyncio/epoll_selector.h>
+#include <asyncio/selector.h>
 #include <utility>
 #include <algorithm>
 #include <queue>
@@ -58,7 +58,7 @@ private:
 private:
     MSDuration::rep start_time_;
     std::queue<std::unique_ptr<Handle>> ready_;
-    EpollSelector selector_;
+    Selector selector_;
     using TimerHandle = std::pair<MSDuration::rep, std::unique_ptr<Handle>>;
     std::vector<TimerHandle> schedule_; // min time heap
 };

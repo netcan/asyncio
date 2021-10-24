@@ -5,16 +5,13 @@
 #ifndef ASYNCIO_EPOLL_SELECTOR_H
 #define ASYNCIO_EPOLL_SELECTOR_H
 #include <asyncio/asyncio_ns.h>
+#include <asyncio/event.h>
 #include <unistd.h>
 #include <sys/epoll.h>
 #include <vector>
 #include <fmt/core.h>
 ASYNCIO_NS_BEGIN
 struct EpollSelector {
-    struct Event {
-        int fd;
-        uint32_t events;
-    };
     EpollSelector(): epfd_(epoll_create1(0)) {
         if (epfd_ < 0) {
             perror("epoll_create1");
