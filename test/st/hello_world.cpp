@@ -21,6 +21,7 @@ Task<std::string> hello_world() {
     auto h = co_await hello();
     auto w = co_await world();
     fmt::print("{} {}\n", h, w);
+    co_await asyncio::sleep(2);
     co_return fmt::format("{} {}", h, w);
 }
 

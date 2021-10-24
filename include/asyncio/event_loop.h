@@ -34,6 +34,10 @@ public:
         return schedule_.empty() && ready_.empty();
     }
 
+    void call_later(MSDuration::rep delay, std::unique_ptr<Handle> callback) {
+        call_at(time() + delay, std::move(callback));
+    }
+
     void call_at(MSDuration::rep when, std::unique_ptr<Handle> callback) {
         schedule_.emplace_back(std::make_pair(when, std::move(callback)));
         std::ranges::push_heap(schedule_, std::ranges::greater{}, &TimerHandle::first);
