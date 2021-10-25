@@ -3,7 +3,7 @@
 //
 #include <catch2/catch_test_macros.hpp>
 #include <asyncio/event_loop.h>
-#include <asyncio/Selector.h>
+#include <asyncio/selector/selector.h>
 
 using namespace ASYNCIO_NS;
 
