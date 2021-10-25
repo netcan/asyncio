@@ -9,20 +9,26 @@
 #include <asyncio/runner.h>
 using namespace ASYNCIO_NS;
 
-Task<std::string_view> world() {
-    co_return "world";
-}
-
 Task<std::string_view> hello() {
+    fmt::print("enter {}...\n", __FUNCTION__ );
+    co_await asyncio::sleep(3);
+    fmt::print("exit {}...\n", __FUNCTION__ );
     co_return "hello";
 }
 
-Task<std::string> hello_world() {
-    auto h = co_await hello();
-    auto w = co_await world();
-    fmt::print("{} {}\n", h, w);
+Task<std::string_view> world() {
+    fmt::print("enter {}...\n", __FUNCTION__ );
     co_await asyncio::sleep(2);
-    co_return fmt::format("{} {}", h, w);
+    fmt::print("exit {}...\n", __FUNCTION__ );
+    co_return "world";
+}
+
+
+Task<std::string> hello_world() {
+    auto h = asyncio::create_task(hello());
+    auto w = asyncio::create_task(world());
+
+    co_return fmt::format("{} {}\n", co_await h, co_await w);
 }
 
 int main() {
