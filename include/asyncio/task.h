@@ -22,15 +22,16 @@ struct CoroHandle: Handle {
     void run() override {
         // if detached, do nothing
         if (state() == PromiseState::PENDING) {
+            // set to unschedule in advance, because 'resume' may change state
+            handle_.promise().state_ = PromiseState::UNSCHEDULED;
             handle_.resume();
         }
     }
     ~CoroHandle() {
-        if (handle_.done() && state() == PromiseState::CANCELED) {
+        if (state() == PromiseState::CANCELED) {
             handle_.destroy();
             return;
         }
-        handle_.promise().state_ = PromiseState::UNSCHEDULED;
     }
 private:
     PromiseState& state() {
@@ -154,7 +155,8 @@ auto sleep(double delay /* second */) {
 }
 
 template<typename Fut>
-[[nodiscard("discard(detached) a task will not schedule to run")]] auto create_task(Fut&& fut) {
+[[nodiscard("discard(detached) a task will not schedule to run")]]
+auto create_task(Fut&& fut) {
     auto& loop = get_event_loop();
     loop.call_soon(std::make_unique<CoroHandle<typename Fut::promise_type>>(fut.handle_));
     return fut;
