@@ -26,7 +26,7 @@ struct CoroHandle: Handle {
         }
     }
     ~CoroHandle() {
-        if (handle_.done() && state() == PromiseState::DETACHED) {
+        if (handle_.done() && state() == PromiseState::CANCELED) {
             handle_.destroy();
             return;
         }
@@ -55,7 +55,7 @@ struct Task: private NonCopyable {
     ~Task() {
         if (handle_) {
             if (handle_.done()) { handle_.destroy(); }
-            else { handle_.promise().state_ = PromiseState::DETACHED; }
+            else { handle_.promise().state_ = PromiseState::CANCELED; }
         }
     }
 
