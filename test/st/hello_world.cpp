@@ -11,14 +11,14 @@ using namespace ASYNCIO_NS;
 
 Task<std::string_view> hello() {
     fmt::print("enter {}...\n", __FUNCTION__ );
-    co_await asyncio::sleep(3);
+    co_await asyncio::sleep(1);
     fmt::print("exit {}...\n", __FUNCTION__ );
     co_return "hello";
 }
 
 Task<std::string_view> world() {
     fmt::print("enter {}...\n", __FUNCTION__ );
-    co_await asyncio::sleep(2);
+    co_await asyncio::sleep(0.5);
     fmt::print("exit {}...\n", __FUNCTION__ );
     co_return "world";
 }
@@ -27,12 +27,10 @@ Task<std::string_view> world() {
 Task<std::string> hello_world() {
     auto h = asyncio::create_task(hello());
     auto w = asyncio::create_task(world());
-
     co_return fmt::format("{} {}\n", co_await h, co_await w);
 }
 
 int main() {
     fmt::print("run result: {}\n", asyncio::run(hello_world()));
-
     return 0;
 }

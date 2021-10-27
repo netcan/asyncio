@@ -13,7 +13,7 @@
 ASYNCIO_NS_BEGIN
 
 enum class PromiseState: uint8_t {
-    INITIAL,
+    UNSCHEDULED,
     PENDING,
     DETACHED,
 };
@@ -27,7 +27,7 @@ struct CoroHandle: Handle {
         handle_.resume();
     }
     ~CoroHandle() {
-        handle_.promise().state_ = PromiseState::INITIAL;
+        handle_.promise().state_ = PromiseState::UNSCHEDULED;
     }
 private:
     std::coroutine_handle<Promise> handle_;
@@ -59,21 +59,19 @@ struct Task: private NonCopyable {
 
 
     struct Awaiter {
-        constexpr bool await_ready() { return false; }
+        constexpr bool await_ready() { return self_coro_.done(); }
         R await_resume() const noexcept {
             return self_coro_.promise().result();
         }
         template<typename Promise>
-        bool await_suspend(std::coroutine_handle<Promise> resumer) const noexcept {
-            if (resumer.promise().state_ == PromiseState::PENDING) {
-                return false;
-            }
+        void await_suspend(std::coroutine_handle<Promise> resumer) const noexcept {
             assert(! self_coro_.promise().continuation_);
             self_coro_.promise().continuation_ = std::make_unique<CoroHandle<Promise>>(resumer);
-            EventLoop& loop_{get_event_loop()};
 
-            loop_.call_soon(std::make_unique<CoroHandle<promise_type>>(self_coro_));
-            return true;
+            if (self_coro_.promise().state_ != PromiseState::PENDING) {
+                EventLoop& loop_{get_event_loop()};
+                loop_.call_soon(std::make_unique<CoroHandle<promise_type>>(self_coro_));
+            }
         }
         coro_handle self_coro_ {};
     };
@@ -124,7 +122,7 @@ struct Task: private NonCopyable {
         }
 
         // to auto delete by final awaiter
-        PromiseState state_ {PromiseState::INITIAL};
+        PromiseState state_ {PromiseState::UNSCHEDULED};
         std::unique_ptr<Handle> continuation_;
     };
 
