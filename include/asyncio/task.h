@@ -12,24 +12,30 @@
 
 ASYNCIO_NS_BEGIN
 
-enum class PromiseState: uint8_t {
-    UNSCHEDULED,
-    PENDING,
-    DETACHED,
-};
-
 template<typename Promise>
 struct CoroHandle: Handle {
-    CoroHandle(std::coroutine_handle<Promise> handle): handle_(handle) {
-        handle_.promise().state_ = PromiseState::PENDING;
+    CoroHandle(std::coroutine_handle<Promise> handle)
+            : handle_(handle) { }
+    void set_state(PromiseState s) override {
+        state() = s;
     }
     void run() override {
-        handle_.resume();
+        // if detached, do nothing
+        if (state() == PromiseState::PENDING) {
+            handle_.resume();
+        }
     }
     ~CoroHandle() {
+        if (handle_.done() && state() == PromiseState::DETACHED) {
+            handle_.destroy();
+            return;
+        }
         handle_.promise().state_ = PromiseState::UNSCHEDULED;
     }
 private:
+    PromiseState& state() {
+        return handle_.promise().state_;
+    }
     std::coroutine_handle<Promise> handle_;
 };
 
@@ -101,7 +107,7 @@ struct Task: private NonCopyable {
     struct promise_type: PromiseResult {
         auto initial_suspend() noexcept { return std::suspend_always{}; }
         struct FinalAwaiter {
-            constexpr bool await_ready() const noexcept { return detached; }
+            constexpr bool await_ready() const noexcept { return false; }
             template<typename Promise>
             constexpr void await_suspend(std::coroutine_handle<Promise> h) const noexcept {
                 if (h.promise().continuation_) {
@@ -110,11 +116,9 @@ struct Task: private NonCopyable {
                 }
             }
             constexpr void await_resume() const noexcept {}
-
-            bool detached;
         };
         auto final_suspend() noexcept {
-            return FinalAwaiter {state_ == PromiseState::DETACHED};
+            return FinalAwaiter {};
         }
         void unhandled_exception() { std::terminate(); }
         Task get_return_object() noexcept {
@@ -150,7 +154,7 @@ auto sleep(double delay /* second */) {
 }
 
 template<typename Fut>
-auto create_task(Fut&& fut) {
+[[nodiscard("discard(detached) a task will not schedule to run")]] auto create_task(Fut&& fut) {
     auto& loop = get_event_loop();
     loop.call_soon(std::make_unique<CoroHandle<typename Fut::promise_type>>(fut.handle_));
     return fut;

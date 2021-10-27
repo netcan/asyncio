@@ -39,11 +39,13 @@ public:
     }
 
     void call_at(MSDuration::rep when, std::unique_ptr<Handle> callback) {
+        callback->set_state(PromiseState::PENDING);
         schedule_.emplace_back(std::make_pair(when, std::move(callback)));
         std::ranges::push_heap(schedule_, std::ranges::greater{}, &TimerHandle::first);
     }
 
     void call_soon(std::unique_ptr<Handle> callback) {
+        callback->set_state(PromiseState::PENDING);
         ready_.emplace(std::move(callback));
     }
 

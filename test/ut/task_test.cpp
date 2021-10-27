@@ -60,7 +60,8 @@ SCENARIO("test Task await result value") {
     EventLoop& loop = get_event_loop();
     GIVEN("square_sum 3, 4") {
         auto square_sum = [&](int x, int y) -> Task<int> {
-            auto x2 = co_await square(x);
+            auto tx = square(x);
+            auto x2 = co_await tx;
             auto y2 = co_await square(y);
             co_return x2 + y2;
         };
@@ -98,4 +99,25 @@ SCENARIO("test Task for loop") {
     REQUIRE(loop.run_until_complete(sequense(10)) == -55);
     REQUIRE(loop.run_until_complete(sequense(100)) == -5050);
     REQUIRE(loop.run_until_complete(sequense(100000)) == -5000050000);
+}
+
+
+SCENARIO("test create_task") {
+    EventLoop& loop = get_event_loop();
+
+    std::vector<int> result;
+    auto f = [&]() -> Task<> {
+        result.push_back(0xabab);
+        co_return;
+    };
+
+    GIVEN("run and detach created task") {
+        auto test = [&]() -> Task<> {
+            auto handle = asyncio::create_task(f());
+            co_return;
+        };
+        loop.run_until_complete(test());
+        REQUIRE(result.empty());
+    }
+
 }
