@@ -147,7 +147,7 @@ SCENARIO("test gather") {
         co_return r;
     };
     auto test_void_func = []() -> Task<> {
-        fmt::print("this is a void value");
+        fmt::print("this is a void value\n");
         co_return;
     };
 

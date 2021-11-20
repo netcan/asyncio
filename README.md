@@ -23,7 +23,7 @@ world
 
 ## Gather
 ```cpp
-auto factorial = [](std::string_view name, int number) -> Task<int> {
+auto factorial(std::string_view name, int number) -> Task<int> {
     int r = 1;
     for (int i = 2; i <= number; ++i) {
         fmt::print("Task {}: Compute factorial({}), currently i={}...\n", name, number, i);
@@ -33,19 +33,19 @@ auto factorial = [](std::string_view name, int number) -> Task<int> {
     fmt::print("Task {}: factorial({}) = {}\n", name, number, r);
     co_return r;
 };
-auto test_void_func = []() -> Task<> {
-    fmt::print("this is a void value");
+
+auto test_void_func() -> Task<> {
+    fmt::print("this is a void value\n");
     co_return;
 };
 
 int main() {
     asyncio::run([&]() -> Task<> {
         auto&& [a, b, c, _void] = co_await asyncio::gather(
-                factorial("A", 2),
-                factorial("B", 3),
-                factorial("C", 4),
-                test_void_func()
-        );
+            factorial("A", 2),
+            factorial("B", 3),
+            factorial("C", 4),
+            test_void_func());
         assert(a == 2);
         assert(b == 6);
         assert(c == 24);
@@ -58,7 +58,8 @@ output:
 Task A: Compute factorial(2), currently i=2...
 Task B: Compute factorial(3), currently i=2...
 Task C: Compute factorial(4), currently i=2...
-this is a void valueTask C: Compute factorial(4), currently i=3...
+this is a void value
+Task C: Compute factorial(4), currently i=3...
 Task A: factorial(2) = 2
 Task B: Compute factorial(3), currently i=3...
 Task B: factorial(3) = 6
