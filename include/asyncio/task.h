@@ -150,6 +150,7 @@ struct SleepAwaiter {
 };
 }
 
+[[nodiscard]]
 auto sleep(double delay /* second */) {
     return detail::SleepAwaiter {delay};
 }
