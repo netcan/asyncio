@@ -12,42 +12,14 @@
 
 ASYNCIO_NS_BEGIN
 
-template<typename Promise>
-struct CoroHandle: Handle {
-    CoroHandle(std::coroutine_handle<Promise> handle)
-            : handle_(handle) { }
-    void set_state(PromiseState s) override {
-        state() = s;
-    }
-    void run() override {
-        // if detached, do nothing
-        if (state() == PromiseState::PENDING) {
-            // set to unschedule in advance, because 'resume' may change state
-            handle_.promise().state_ = PromiseState::UNSCHEDULED;
-            handle_.resume();
-        }
-    }
-    ~CoroHandle() {
-        if (state() == PromiseState::CANCELED) {
-            handle_.destroy();
-            return;
-        }
-    }
-private:
-    PromiseState& state() {
-        return handle_.promise().state_;
-    }
-    std::coroutine_handle<Promise> handle_;
-};
-
 ///////////////////////////////////////////////////////////////////////////////
 template<typename R = void>
 struct Task: private NonCopyable {
     struct promise_type;
     using coro_handle = std::coroutine_handle<promise_type>;
 
-    std::unique_ptr<Handle> get_resumable() {
-        return std::make_unique<CoroHandle<promise_type>>(handle_);
+    Handle& get_resumable() {
+        return handle_.promise();
     }
 
     Task() = default;
@@ -73,11 +45,11 @@ struct Task: private NonCopyable {
         template<typename Promise>
         void await_suspend(std::coroutine_handle<Promise> resumer) const noexcept {
             assert(! self_coro_.promise().continuation_);
-            self_coro_.promise().continuation_ = std::make_unique<CoroHandle<Promise>>(resumer);
+            self_coro_.promise().continuation_ = &resumer.promise();
 
             if (self_coro_.promise().state_ != PromiseState::PENDING) {
                 EventLoop& loop_{get_event_loop()};
-                loop_.call_soon(std::make_unique<CoroHandle<promise_type>>(self_coro_));
+                loop_.call_soon(self_coro_.promise());
             }
         }
         coro_handle self_coro_ {};
@@ -105,7 +77,7 @@ struct Task: private NonCopyable {
             , promise_void_result
             , promise_result>;
 
-    struct promise_type: PromiseResult {
+    struct promise_type: PromiseResult, Handle {
         auto initial_suspend() noexcept { return std::suspend_always{}; }
         struct FinalAwaiter {
             constexpr bool await_ready() const noexcept { return false; }
@@ -113,7 +85,7 @@ struct Task: private NonCopyable {
             constexpr void await_suspend(std::coroutine_handle<Promise> h) const noexcept {
                 if (h.promise().continuation_) {
                     EventLoop& loop_{get_event_loop()};
-                    loop_.call_soon(std::move(h.promise().continuation_));
+                    loop_.call_soon(*h.promise().continuation_);
                 }
             }
             constexpr void await_resume() const noexcept {}
@@ -126,9 +98,23 @@ struct Task: private NonCopyable {
             return Task{coro_handle::from_promise(*this)};
         }
 
+        ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        void run() override {
+            auto handle = coro_handle::from_promise(*this);
+            if (state_ == PromiseState::PENDING) {
+                // set to unschedule in advance, because 'resume' may change state
+                handle.promise().state_ = PromiseState::UNSCHEDULED;
+                handle.resume();
+            } else if (state_ == PromiseState::CANCELED) {
+                handle.destroy();
+            }
+        }
+        PromiseState& state() override { return state_; }
+        ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
         // to auto delete by final awaiter
         PromiseState state_ {PromiseState::UNSCHEDULED};
-        std::unique_ptr<Handle> continuation_;
+        Handle* continuation_ {};
     };
 
     explicit Task(coro_handle h) noexcept: handle_(h) {}
@@ -144,7 +130,7 @@ struct SleepAwaiter {
     void await_suspend(std::coroutine_handle<Promise> caller) const noexcept {
         auto& loop = get_event_loop();
         loop.call_later(delay_ * 1000,
-                        std::make_unique<CoroHandle<Promise>>(caller));
+                        caller.promise());
     }
     double delay_;
 };
@@ -159,7 +145,7 @@ template<typename Fut>
 [[nodiscard("discard(detached) a task will not schedule to run")]]
 decltype(auto) create_task(Fut&& fut) {
     auto& loop = get_event_loop();
-    loop.call_soon(std::make_unique<CoroHandle<typename std::remove_reference_t<Fut>::promise_type>>(fut.handle_));
+    loop.call_soon(fut.get_resumable());
     return std::forward<Fut>(fut);
 }
 

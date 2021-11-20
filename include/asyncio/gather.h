@@ -24,7 +24,7 @@ struct GatherAwaiter {
     constexpr auto await_resume() const noexcept { return result_; }
     template<typename Promise>
     void await_suspend(std::coroutine_handle<Promise> continuation) noexcept {
-        continuation_ = std::make_unique<CoroHandle<Promise>>(continuation);
+        continuation_ = &continuation.promise();
     }
 
     template<typename... Futs, size_t ...Is>
@@ -46,11 +46,11 @@ private:
             std::get<Idx>(result_) = std::move(co_await create_task(std::forward<Fut>(fut)));
         }
         if (++count == sizeof...(Rs) && continuation_) {
-            get_event_loop().call_soon(std::move(continuation_));
+            get_event_loop().call_soon(*continuation_);
         }
     }
 private:
-    std::unique_ptr<Handle> continuation_;
+    Handle* continuation_{};
     std::tuple<Rs...> result_;
     std::tuple<Task<std::void_t<Rs>>...> tasks_;
     int count{0};

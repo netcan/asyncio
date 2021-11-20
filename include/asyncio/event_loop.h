@@ -34,19 +34,19 @@ public:
         return schedule_.empty() && ready_.empty();
     }
 
-    void call_later(MSDuration::rep delay, std::unique_ptr<Handle> callback) {
-        call_at(time() + delay, std::move(callback));
+    void call_later(MSDuration::rep delay, Handle& callback) {
+        call_at(time() + delay, callback);
     }
 
-    void call_at(MSDuration::rep when, std::unique_ptr<Handle> callback) {
-        callback->set_state(PromiseState::PENDING);
-        schedule_.emplace_back(std::make_pair(when, std::move(callback)));
+    void call_at(MSDuration::rep when, Handle& callback) {
+        callback.state() = PromiseState::PENDING;
+        schedule_.emplace_back(std::make_pair(when, &callback));
         std::ranges::push_heap(schedule_, std::ranges::greater{}, &TimerHandle::first);
     }
 
-    void call_soon(std::unique_ptr<Handle> callback) {
-        callback->set_state(PromiseState::PENDING);
-        ready_.emplace(std::move(callback));
+    void call_soon(Handle& callback) {
+        callback.state() = PromiseState::PENDING;
+        ready_.emplace(&callback);
     }
 
     template<concepts::Future Fut>
@@ -63,9 +63,9 @@ private:
 
 private:
     MSDuration::rep start_time_;
-    std::queue<std::unique_ptr<Handle>> ready_;
+    std::queue<Handle*> ready_;
     Selector selector_;
-    using TimerHandle = std::pair<MSDuration::rep, std::unique_ptr<Handle>>;
+    using TimerHandle = std::pair<MSDuration::rep, Handle*>;
     std::vector<TimerHandle> schedule_; // min time heap
 };
 

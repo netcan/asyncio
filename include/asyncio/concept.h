@@ -11,7 +11,7 @@ ASYNCIO_NS_BEGIN
 namespace concepts {
 template<typename Fut>
 concept Future = requires(Fut fut) {
-    { *fut.get_resumable() } -> std::convertible_to<Handle&>;
+    { fut.get_resumable() } -> std::convertible_to<Handle&>;
     fut.get_result();
 };
 
