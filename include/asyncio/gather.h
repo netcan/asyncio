@@ -6,6 +6,7 @@
 #define ASYNCIO_GATHER_H
 #include <asyncio/asyncio_ns.h>
 #include <asyncio/void_value.h>
+#include <asyncio/awaitable_traits.h>
 #include <tuple>
 ASYNCIO_NS_BEGIN
 namespace detail {
@@ -39,7 +40,11 @@ struct GatherAwaiter {
 private:
     template<size_t Idx, typename Fut>
     Task<> collect_result(Fut&& fut) {
-        std::get<Idx>(result_) = std::move(co_await create_task(std::forward<Fut>(fut)));
+        if constexpr (std::is_void_v<AwaitResult<Fut>>) {
+            co_await create_task(std::forward<Fut>(fut));
+        } else {
+            std::get<Idx>(result_) = std::move(co_await create_task(std::forward<Fut>(fut)));
+        }
         if (++count == sizeof...(Rs) && continuation_) {
             get_event_loop().call_soon(std::move(continuation_));
         }
@@ -55,7 +60,7 @@ private:
 
 template<typename... Futs>
 auto gather(Futs&&... futs) {
-    return detail::GatherAwaiter<detail::GetResultT_t<decltype(futs.operator co_await().await_resume())>...>
+    return detail::GatherAwaiter<detail::GetResultT_t<AwaitResult<Futs>>...>
     { std::make_index_sequence<sizeof...(Futs)>{}, std::forward<Futs>(futs)... };
 }
 

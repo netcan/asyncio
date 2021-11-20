@@ -146,11 +146,17 @@ SCENARIO("test gather") {
         fmt::print("Task {}: factorial({}) = {}\n", name, number, r);
         co_return r;
     };
+    auto test_void_func = []() -> Task<> {
+        fmt::print("this is a void value");
+        co_return;
+    };
+
     loop.run_until_complete([&]() -> Task<> {
-        auto&& [a, b, c] = co_await asyncio::gather(
+        auto&& [a, b, c, _void] = co_await asyncio::gather(
                 factorial("A", 2),
                 factorial("B", 3),
-                factorial("C", 4)
+                factorial("C", 4),
+                test_void_func()
         );
         REQUIRE(a == 2);
         REQUIRE(b == 6);
