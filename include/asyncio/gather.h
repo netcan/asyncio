@@ -20,7 +20,7 @@ using GetResultT_t = typename GetResultT<T>::type;
 template<typename... Rs>
 struct GatherAwaiter {
     constexpr bool await_ready() noexcept { return false; }
-    constexpr auto await_resume() const noexcept { return result; }
+    constexpr auto await_resume() const noexcept { return result_; }
     template<typename Promise>
     void await_suspend(std::coroutine_handle<Promise> continuation) noexcept {
         continuation_ = std::make_unique<CoroHandle<Promise>>(continuation);
@@ -28,21 +28,26 @@ struct GatherAwaiter {
 
     template<typename... Futs, size_t ...Is>
     GatherAwaiter(std::index_sequence<Is...>, Futs &&... futs)
-    : tasks{ std::make_tuple(asyncio::create_task(collect_result<Is>(std::forward<Futs>(futs)))...) }
-    { }
+    : tasks_{ std::make_tuple(collect_result<Is>(std::forward<Futs>(futs))...) }
+    {
+        std::apply([]<typename... Ts>(Ts&&... tasks) {
+            // use fold expression to guarantee order
+            ((void)asyncio::create_task(std::forward<Ts>(tasks)), ...);
+        }, tasks_);
+    }
 
 private:
     template<size_t Idx, typename Fut>
     Task<> collect_result(Fut&& fut) {
-        std::get<Idx>(result) = std::move(co_await create_task(std::forward<Fut>(fut)));
+        std::get<Idx>(result_) = std::move(co_await create_task(std::forward<Fut>(fut)));
         if (++count == sizeof...(Rs) && continuation_) {
             get_event_loop().call_soon(std::move(continuation_));
         }
     }
 private:
     std::unique_ptr<Handle> continuation_;
-    std::tuple<Rs...> result;
-    std::tuple<Task<std::void_t<Rs>>...> tasks;
+    std::tuple<Rs...> result_;
+    std::tuple<Task<std::void_t<Rs>>...> tasks_;
     int count{0};
 };
 

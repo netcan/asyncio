@@ -158,7 +158,7 @@ template<typename Fut>
 [[nodiscard("discard(detached) a task will not schedule to run")]]
 decltype(auto) create_task(Fut&& fut) {
     auto& loop = get_event_loop();
-    loop.call_soon(std::make_unique<CoroHandle<typename Fut::promise_type>>(fut.handle_));
+    loop.call_soon(std::make_unique<CoroHandle<typename std::remove_reference_t<Fut>::promise_type>>(fut.handle_));
     return std::forward<Fut>(fut);
 }
 
