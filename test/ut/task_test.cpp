@@ -4,10 +4,12 @@
 #include <catch2/catch_test_macros.hpp>
 #include <asyncio/event_loop.h>
 #include <asyncio/task.h>
+#include <asyncio/gather.h>
 #include <functional>
 
 using namespace ASYNCIO_NS;
 
+template<typename...> struct dump;
 template<size_t N>
 Task<> coro_depth_n(std::vector<int>& result) {
     result.push_back(N);
@@ -120,4 +122,41 @@ SCENARIO("test create_task") {
         REQUIRE(result.empty());
     }
 
+    GIVEN("run and await created task") {
+        auto test = [&]() -> Task<> {
+            auto handle = asyncio::create_task(f());
+            co_await handle;
+        };
+        loop.run_until_complete(test());
+        REQUIRE(result.size() == 1);
+        REQUIRE(result[0] == 0xabab);
+    }
+
+}
+
+SCENARIO("test gather") {
+    EventLoop& loop = get_event_loop();
+    auto factorial = [](std::string_view name, int number) -> Task<int> {
+        int r = 1;
+        for (int i = 2; i <= number; ++i) {
+            fmt::print("Task {}: Compute factorial({}), currently i={}...\n", name, number, i);
+            co_await asyncio::sleep(0.5);
+            r *= i;
+        }
+        fmt::print("Task {}: factorial({}) = {}\n", name, number, r);
+        co_return r;
+    };
+    loop.run_until_complete([&]() -> Task<> {
+        auto&& [a, b, c] = co_await asyncio::gather(
+                factorial("A", 2),
+                factorial("B", 3),
+                factorial("C", 4)
+        );
+        REQUIRE(a == 2);
+        REQUIRE(b == 6);
+        REQUIRE(c == 24);
+    }());
+}
+
+SCENARIO("test") {
 }

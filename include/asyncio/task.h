@@ -50,6 +50,7 @@ struct Task: private NonCopyable {
         return std::make_unique<CoroHandle<promise_type>>(handle_);
     }
 
+    Task() = default;
     Task(Task&& t) noexcept
         : handle_(std::exchange(t.handle_, {})) {}
 
@@ -63,7 +64,6 @@ struct Task: private NonCopyable {
     R get_result() {
         return handle_.promise().result();
     }
-
 
     struct Awaiter {
         constexpr bool await_ready() { return self_coro_.done(); }
@@ -156,10 +156,10 @@ auto sleep(double delay /* second */) {
 
 template<typename Fut>
 [[nodiscard("discard(detached) a task will not schedule to run")]]
-auto create_task(Fut&& fut) {
+decltype(auto) create_task(Fut&& fut) {
     auto& loop = get_event_loop();
     loop.call_soon(std::make_unique<CoroHandle<typename Fut::promise_type>>(fut.handle_));
-    return fut;
+    return std::forward<Fut>(fut);
 }
 
 ASYNCIO_NS_END
