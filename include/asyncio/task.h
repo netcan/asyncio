@@ -41,7 +41,7 @@ struct Task: private NonCopyable {
 
     struct Awaiter {
         constexpr bool await_ready() { return self_coro_.done(); }
-        R await_resume() const noexcept {
+        R await_resume() const {
             return self_coro_.promise().result();
         }
         template<typename Promise>
@@ -70,11 +70,11 @@ struct Task: private NonCopyable {
             result_ = std::current_exception();
         }
         R& result() {
-            if (auto res = std::get_if<R>(&result_)) {
-                return *res;
-            }
             if (auto exception = std::get_if<std::exception_ptr>(&result_)) {
                 std::rethrow_exception(*exception);
+            }
+            if (auto res = std::get_if<R>(&result_)) {
+                return *res;
             }
             throw std::runtime_error("result is unset");
         }
@@ -123,10 +123,10 @@ struct Task: private NonCopyable {
             assert(state_ == PromiseState::PENDING);
             auto handle = coro_handle::from_promise(*this);
             // set to unschedule in advance, because 'resume' may change state
-            handle.promise().state_ = PromiseState::UNSCHEDULED;
+            state_ = PromiseState::UNSCHEDULED;
             handle.resume();
         }
-        PromiseState& state() override { return state_; }
+        void set_state(PromiseState state) override { state_ = state; }
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
         // to auto delete by final awaiter

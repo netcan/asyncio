@@ -36,8 +36,9 @@ private:
     }
 
     template<size_t Idx, typename Fut>
-    Task<> collect_result(Fut&& fut) {
-        ASSIGN_VALUE_IF_VOID(std::get<Idx>(result_), co_await schedule_task(std::forward<Fut>(fut)));
+    Task<> collect_result(Fut&& fut) { // TODO: exception handle
+        if constexpr (std::is_void_v<AwaitResult<Fut>>) { co_await schedule_task(std::forward<Fut>(fut)); }
+        else { std::get<Idx>(result_) = std::move(co_await schedule_task(std::forward<Fut>(fut))); }
         if (++count == sizeof...(Rs) && continuation_) {
             get_event_loop().call_soon(*continuation_);
         }

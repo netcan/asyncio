@@ -7,5 +7,10 @@
 #include <asyncio/asyncio_ns.h>
 #include <exception>
 ASYNCIO_NS_BEGIN
+struct TimeoutError: std::exception {
+    const char* what() const noexcept override {
+        return "TimeoutError";
+    }
+};
 ASYNCIO_NS_END
 #endif // ASYNCIO_EXCEPTION_H

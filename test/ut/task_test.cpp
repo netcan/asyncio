@@ -8,6 +8,7 @@
 #include <asyncio/gather.h>
 #include <asyncio/exception.h>
 #include <asyncio/sleep.h>
+#include <asyncio/wait_for.h>
 #include <functional>
 
 using namespace ASYNCIO_NS;
@@ -168,18 +169,46 @@ SCENARIO("test gather") {
     }());
 }
 
+auto int_div(int a, int b) -> Task<double> {
+    if (b == 0) { throw std::overflow_error("b is 0!"); }
+    co_return a / b;
+};
+
 SCENARIO("test exception") {
     EventLoop& loop = get_event_loop();
-    SECTION("normal exception") {
-        auto div = [](int a, int b) -> Task<double> {
-            if (b == 0) { throw std::overflow_error("b is 0!"); }
-            co_return a / b;
-        };
-        REQUIRE(loop.run_until_complete(div(4, 2)) == Approx(2));
-        auto f = [] { throw std::overflow_error("b is 0!"); };
-        REQUIRE_THROWS_AS(loop.run_until_complete(div(4, 0)), std::overflow_error);
+
+    REQUIRE(loop.run_until_complete(int_div(4, 2)) == Approx(2));
+    auto f = [] { throw std::overflow_error("b is 0!"); };
+    REQUIRE_THROWS_AS(loop.run_until_complete(int_div(4, 0)), std::overflow_error);
+}
+
+SCENARIO("test timeout") {
+    EventLoop& loop = get_event_loop();
+
+    auto wait_duration = [&](auto duration) -> Task<int> {
+        co_await sleep(duration);
+        fmt::print("wait_duration finished\n");
+        co_return 0xbabababc;
+    };
+
+    auto wait_test = [&](auto duration, auto timeout) -> Task<int> {
+        co_return co_await wait_for(wait_duration(duration), timeout);
+    };
+
+    SECTION("no timeout") {
+        REQUIRE(loop.run_until_complete(wait_test(12ms, 12000ms)) == 0xbabababc);
     }
 
+    SECTION("notime out with exception") {
+        REQUIRE_THROWS_AS(
+                loop.run_until_complete([]() -> Task<> {
+                    auto v = co_await wait_for(int_div(5, 0), 100ms);
+                }()), std::overflow_error);
+    }
+
+    SECTION("timeout error") {
+        REQUIRE_THROWS_AS(loop.run_until_complete(wait_test(200ms, 100ms)), TimeoutError);
+    }
 }
 
 SCENARIO("test") {

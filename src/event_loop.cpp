@@ -20,6 +20,18 @@ void EventLoop::run_forever() {
 
 void EventLoop::run_once() {
     MSDuration timeout{0};
+    // Remove delayed calls that were cancelled from head of queue.
+    while (! schedule_.empty()) {
+        auto&& [when, handle] = schedule_[0];
+        if (auto iter = cancelled_.find(handle); iter != cancelled_.end()) {
+            ranges::pop_heap(schedule_,std::ranges::greater{}, &TimerHandle::first);
+            schedule_.pop_back();
+            cancelled_.erase(iter);
+        } else {
+            break;
+        }
+    }
+
     if (ready_.empty() && ! schedule_.empty()) {
         auto&& [when, _] = schedule_[0];
         timeout = std::max(when - time(), MSDuration(0));
@@ -30,10 +42,10 @@ void EventLoop::run_once() {
 
     auto end_time = time();
     while (! schedule_.empty()) {
-        ranges::pop_heap(schedule_,std::ranges::greater{}, &TimerHandle::first);
-        auto&& [when, handle] = schedule_.back();
+        auto&& [when, handle] = schedule_[0];
         if (when >= end_time) break;
         ready_.emplace(handle);
+        ranges::pop_heap(schedule_,std::ranges::greater{}, &TimerHandle::first);
         schedule_.pop_back();
     }
 

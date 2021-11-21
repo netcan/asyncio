@@ -40,7 +40,7 @@ public:
     }
 
     void call_at(MSDuration when, Handle& callback) {
-        callback.state() = PromiseState::PENDING;
+        callback.set_state(PromiseState::PENDING);
         schedule_.emplace_back(std::make_pair(when, &callback));
         std::ranges::push_heap(schedule_, std::ranges::greater{}, &TimerHandle::first);
     }
@@ -50,7 +50,7 @@ public:
     }
 
     void call_soon(Handle& callback) {
-        callback.state() = PromiseState::PENDING;
+        callback.set_state(PromiseState::PENDING);
         ready_.emplace(&callback);
     }
 

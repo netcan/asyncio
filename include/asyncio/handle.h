@@ -15,7 +15,7 @@ enum class PromiseState: uint8_t {
 
 struct Handle {
     virtual void run() = 0;
-    virtual PromiseState& state() = 0;
+    virtual void set_state(PromiseState state) {}
     virtual ~Handle() = default;
 };
 ASYNCIO_NS_END

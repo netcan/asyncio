@@ -14,7 +14,7 @@ SCENARIO("lots of synchronous completions") {
         co_return 1;
     };
 
-    auto main = [&]() -> Task<int> {
+    auto main = [&]() -> Task<> {
         int sum = 0;
         for (int i = 0; i < 1'000'000; ++i) {
             sum += co_await completes_synchronously();
