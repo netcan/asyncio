@@ -8,6 +8,7 @@
 #include <asyncio/concept/future.h>
 #include <asyncio/selector/selector.h>
 #include <utility>
+#include <set>
 #include <algorithm>
 #include <queue>
 #include <chrono>
@@ -44,6 +45,10 @@ public:
         std::ranges::push_heap(schedule_, std::ranges::greater{}, &TimerHandle::first);
     }
 
+    void cancel_handle(Handle& handle) {
+        cancelled_.insert(&handle);
+    }
+
     void call_soon(Handle& callback) {
         callback.state() = PromiseState::PENDING;
         ready_.emplace(&callback);
@@ -64,6 +69,7 @@ private:
 private:
     MSDuration start_time_;
     std::queue<Handle*> ready_;
+    std::set<Handle*> cancelled_;
     Selector selector_;
     using TimerHandle = std::pair<MSDuration, Handle*>;
     std::vector<TimerHandle> schedule_; // min time heap

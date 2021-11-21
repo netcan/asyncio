@@ -40,7 +40,11 @@ void EventLoop::run_once() {
     for (size_t ntodo = ready_.size(), i = 0; i < ntodo ; ++i ) {
         auto handle = ready_.front();
         ready_.pop();
-        handle->run();
+        if (auto iter = cancelled_.find(handle); iter != cancelled_.end()) {
+            cancelled_.erase(iter);
+        } else {
+            handle->run();
+        }
     }
 }
 

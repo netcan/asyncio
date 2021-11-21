@@ -27,8 +27,11 @@ struct Task: private NonCopyable {
 
     ~Task() {
         if (handle_) {
-            if (handle_.done()) { handle_.destroy(); }
-            else { handle_.promise().state_ = PromiseState::CANCELED; }
+            if (handle_.promise().state_ == PromiseState::PENDING) {
+                EventLoop& loop_{get_event_loop()};
+                loop_.cancel_handle(handle_.promise());
+            }
+            handle_.destroy();
         }
     }
 
@@ -46,6 +49,7 @@ struct Task: private NonCopyable {
             assert(! self_coro_.promise().continuation_);
             self_coro_.promise().continuation_ = &resumer.promise();
 
+            // if not schedule_task
             if (self_coro_.promise().state_ != PromiseState::PENDING) {
                 EventLoop& loop_{get_event_loop()};
                 loop_.call_soon(self_coro_.promise());
@@ -65,7 +69,7 @@ struct Task: private NonCopyable {
         void unhandled_exception() noexcept {
             result_ = std::current_exception();
         }
-        R& result() & {
+        R& result() {
             if (auto res = std::get_if<R>(&result_)) {
                 return *res;
             }
@@ -116,14 +120,11 @@ struct Task: private NonCopyable {
 
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
         void run() override {
+            assert(state_ == PromiseState::PENDING);
             auto handle = coro_handle::from_promise(*this);
-            if (state_ == PromiseState::PENDING) {
-                // set to unschedule in advance, because 'resume' may change state
-                handle.promise().state_ = PromiseState::UNSCHEDULED;
-                handle.resume();
-            } else if (state_ == PromiseState::CANCELED) {
-                handle.destroy();
-            }
+            // set to unschedule in advance, because 'resume' may change state
+            handle.promise().state_ = PromiseState::UNSCHEDULED;
+            handle.resume();
         }
         PromiseState& state() override { return state_; }
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////

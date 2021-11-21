@@ -11,13 +11,6 @@
 #include <tuple>
 ASYNCIO_NS_BEGIN
 namespace detail {
-template<typename T>
-struct GetResultT: std::type_identity<T> {};
-template<>
-struct GetResultT<void>: std::type_identity<VoidValue> {};
-
-template<typename T>
-using GetResultT_t = typename GetResultT<T>::type;
 
 template<typename... Rs>
 struct GatherAwaiter {
@@ -28,41 +21,41 @@ struct GatherAwaiter {
         continuation_ = &continuation.promise();
     }
 
+    template<concepts::Future... Futs>
+    GatherAwaiter(Futs&&... futs)
+    : GatherAwaiter( std::make_index_sequence<sizeof...(Futs)>{}
+                   , std::forward<Futs>(futs)...) { }
+private:
     template<concepts::Future... Futs, size_t ...Is>
     GatherAwaiter(std::index_sequence<Is...>, Futs &&... futs)
-    : tasks_{ std::make_tuple(collect_result<Is>(std::forward<Futs>(futs))...) }
-    {
+            : tasks_{ std::make_tuple(collect_result<Is>(std::forward<Futs>(futs))...) } {
         std::apply([]<typename... Ts>(Ts&&... tasks) {
             // use fold expression to guarantee order
             ((void) asyncio::schedule_task(std::forward<Ts>(tasks)), ...);
         }, tasks_);
     }
 
-private:
     template<size_t Idx, typename Fut>
     Task<> collect_result(Fut&& fut) {
-        if constexpr (std::is_void_v<AwaitResult<Fut>>) {
-            co_await schedule_task(std::forward<Fut>(fut));
-        } else {
-            std::get<Idx>(result_) = std::move(co_await schedule_task(std::forward<Fut>(fut)));
-        }
+        ASSIGN_VALUE_IF_VOID(std::get<Idx>(result_), co_await schedule_task(std::forward<Fut>(fut)));
         if (++count == sizeof...(Rs) && continuation_) {
             get_event_loop().call_soon(*continuation_);
         }
     }
 private:
-    Handle* continuation_{};
-    std::tuple<Rs...> result_;
+    [[no_unique_address]] std::tuple<Rs...> result_;
     std::tuple<Task<std::void_t<Rs>>...> tasks_;
+    Handle* continuation_{};
     int count{0};
 };
 
+template<concepts::Future... Futs> // C++17 deduction guide
+GatherAwaiter(Futs&&...) -> GatherAwaiter<GetTypeIfVoid_t<AwaitResult<Futs>>...>;
 }
 
 template<concepts::Future... Futs>
 auto gather(Futs&&... futs) {
-    return detail::GatherAwaiter<detail::GetResultT_t<AwaitResult<Futs>>...>
-    { std::make_index_sequence<sizeof...(Futs)>{}, std::forward<Futs>(futs)... };
+    return detail::GatherAwaiter { std::forward<Futs>(futs)... };
 }
 
 ASYNCIO_NS_END
