@@ -25,8 +25,8 @@ Task<std::string_view> world() {
 
 
 Task<std::string> hello_world() {
-    auto h = asyncio::create_task(hello());
-    auto w = asyncio::create_task(world());
+    auto h = asyncio::schedule_task(hello());
+    auto w = asyncio::schedule_task(world());
     co_return fmt::format("{} {}\n", co_await h, co_await w);
 }
 

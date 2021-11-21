@@ -104,7 +104,7 @@ SCENARIO("test Task for loop") {
 }
 
 
-SCENARIO("test create_task") {
+SCENARIO("test schedule_task") {
     EventLoop& loop = get_event_loop();
 
     std::vector<int> result;
@@ -115,7 +115,7 @@ SCENARIO("test create_task") {
 
     GIVEN("run and detach created task") {
         auto test = [&]() -> Task<> {
-            auto handle = asyncio::create_task(f());
+            auto handle = asyncio::schedule_task(f());
             co_return;
         };
         loop.run_until_complete(test());
@@ -124,7 +124,7 @@ SCENARIO("test create_task") {
 
     GIVEN("run and await created task") {
         auto test = [&]() -> Task<> {
-            auto handle = asyncio::create_task(f());
+            auto handle = asyncio::schedule_task(f());
             co_await handle;
         };
         loop.run_until_complete(test());

@@ -33,7 +33,7 @@ struct GatherAwaiter {
     {
         std::apply([]<typename... Ts>(Ts&&... tasks) {
             // use fold expression to guarantee order
-            ((void)asyncio::create_task(std::forward<Ts>(tasks)), ...);
+            ((void) asyncio::schedule_task(std::forward<Ts>(tasks)), ...);
         }, tasks_);
     }
 
@@ -41,9 +41,9 @@ private:
     template<size_t Idx, typename Fut>
     Task<> collect_result(Fut&& fut) {
         if constexpr (std::is_void_v<AwaitResult<Fut>>) {
-            co_await create_task(std::forward<Fut>(fut));
+            co_await schedule_task(std::forward<Fut>(fut));
         } else {
-            std::get<Idx>(result_) = std::move(co_await create_task(std::forward<Fut>(fut)));
+            std::get<Idx>(result_) = std::move(co_await schedule_task(std::forward<Fut>(fut)));
         }
         if (++count == sizeof...(Rs) && continuation_) {
             get_event_loop().call_soon(*continuation_);

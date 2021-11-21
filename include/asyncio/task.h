@@ -143,7 +143,7 @@ auto sleep(double delay /* second */) {
 
 template<typename Fut>
 [[nodiscard("discard(detached) a task will not schedule to run")]]
-decltype(auto) create_task(Fut&& fut) {
+decltype(auto) schedule_task(Fut&& fut) {
     auto& loop = get_event_loop();
     loop.call_soon(fut.get_resumable());
     return std::forward<Fut>(fut);

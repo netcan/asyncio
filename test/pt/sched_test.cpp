@@ -9,7 +9,7 @@
 
 using asyncio::Task;
 
-SCENARIO("sched loop test") {
+SCENARIO("lots of synchronous completions") {
     auto completes_synchronously = []() -> Task<int> {
         co_return 1;
     };
@@ -22,7 +22,7 @@ SCENARIO("sched loop test") {
         REQUIRE(sum == 1'000'000);
     };
 
-    ankerl::nanobench::Bench().run("lots of synchronous completions ", [&] {
+    ankerl::nanobench::Bench().epochs(20).run("lots of synchronous completions ", [&] {
         asyncio::run(main());
     });
 }
@@ -31,7 +31,7 @@ SCENARIO("sched simple test") {
         co_return 1;
     };
 
-    ankerl::nanobench::Bench().run("lots of synchronous completions ", [&] {
+    ankerl::nanobench::Bench().epochs(1'000).run("sched simple test", [&] {
         asyncio::run(main());
     });
 }
