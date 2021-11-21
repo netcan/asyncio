@@ -21,24 +21,24 @@ public:
     EventLoop() {
         using namespace std::chrono;
         auto now = system_clock::now();
-        start_time_ = duration_cast<MSDuration>(now.time_since_epoch()).count();
+        start_time_ = duration_cast<MSDuration>(now.time_since_epoch());
     }
 
-    MSDuration::rep time() {
+    MSDuration time() {
         using namespace std::chrono;
         auto now = system_clock::now();
-        return duration_cast<MSDuration>(now.time_since_epoch()).count() - start_time_;
+        return duration_cast<MSDuration>(now.time_since_epoch()) - start_time_;
     }
 
     bool is_stop() {
         return schedule_.empty() && ready_.empty();
     }
 
-    void call_later(MSDuration::rep delay, Handle& callback) {
+    void call_later(MSDuration delay, Handle& callback) {
         call_at(time() + delay, callback);
     }
 
-    void call_at(MSDuration::rep when, Handle& callback) {
+    void call_at(MSDuration when, Handle& callback) {
         callback.state() = PromiseState::PENDING;
         schedule_.emplace_back(std::make_pair(when, &callback));
         std::ranges::push_heap(schedule_, std::ranges::greater{}, &TimerHandle::first);
@@ -62,10 +62,10 @@ private:
     void run_once();
 
 private:
-    MSDuration::rep start_time_;
+    MSDuration start_time_;
     std::queue<Handle*> ready_;
     Selector selector_;
-    using TimerHandle = std::pair<MSDuration::rep, Handle*>;
+    using TimerHandle = std::pair<MSDuration, Handle*>;
     std::vector<TimerHandle> schedule_; // min time heap
 };
 

@@ -19,13 +19,13 @@ void EventLoop::run_forever() {
 }
 
 void EventLoop::run_once() {
-    MSDuration::rep timeout{0};
+    MSDuration timeout{0};
     if (ready_.empty() && ! schedule_.empty()) {
         auto&& [when, _] = schedule_[0];
-        timeout = std::max(when - time(), MSDuration::rep(0));
+        timeout = std::max(when - time(), MSDuration(0));
     }
 
-    auto event_lists = selector_.select(timeout);
+    auto event_lists = selector_.select(timeout.count());
     // TODO: handle event_lists
 
     auto end_time = time();
@@ -33,12 +33,12 @@ void EventLoop::run_once() {
         ranges::pop_heap(schedule_,std::ranges::greater{}, &TimerHandle::first);
         auto&& [when, handle] = schedule_.back();
         if (when >= end_time) break;
-        ready_.emplace(std::move(handle));
+        ready_.emplace(handle);
         schedule_.pop_back();
     }
 
     for (size_t ntodo = ready_.size(), i = 0; i < ntodo ; ++i ) {
-        auto handle = std::move(ready_.front());
+        auto handle = ready_.front();
         ready_.pop();
         handle->run();
     }

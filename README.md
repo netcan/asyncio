@@ -7,7 +7,7 @@ It's for study purpose, to learn C++20 coroutine mechanism, and to imitate the p
 ```cpp
 Task<> hello_world() {
     fmt::print("hello\n");
-    co_await asyncio::sleep(1);
+    co_await asyncio::sleep(1s);
     fmt::print("world\n");
 }
 
@@ -27,7 +27,7 @@ auto factorial(std::string_view name, int number) -> Task<int> {
     int r = 1;
     for (int i = 2; i <= number; ++i) {
         fmt::print("Task {}: Compute factorial({}), currently i={}...\n", name, number, i);
-        co_await asyncio::sleep(.5);
+        co_await asyncio::sleep(500ms);
         r *= i;
     }
     fmt::print("Task {}: factorial({}) = {}\n", name, number, r);

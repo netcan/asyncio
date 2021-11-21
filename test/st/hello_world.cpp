@@ -13,14 +13,14 @@ using namespace ASYNCIO_NS;
 
 Task<std::string_view> hello() {
     fmt::print("enter {}...\n", __FUNCTION__ );
-    co_await asyncio::sleep(1);
+    co_await asyncio::sleep(1s);
     fmt::print("exit {}...\n", __FUNCTION__ );
     co_return "hello";
 }
 
 Task<std::string_view> world() {
     fmt::print("enter {}...\n", __FUNCTION__ );
-    co_await asyncio::sleep(0.5);
+    co_await asyncio::sleep(500ms);
     fmt::print("exit {}...\n", __FUNCTION__ );
     co_return "world";
 }

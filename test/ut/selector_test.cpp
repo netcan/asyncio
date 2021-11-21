@@ -6,12 +6,13 @@
 #include <asyncio/selector/selector.h>
 
 using namespace ASYNCIO_NS;
+using namespace std::chrono;
 
 SCENARIO("test selector wait") {
     EventLoop loop;
     Selector selector;
-    int before_wait = loop.time();
+    auto before_wait = loop.time();
     selector.select(300);
-    int after_wait = loop.time();
-    REQUIRE(after_wait - before_wait >= 300);
+    auto after_wait = loop.time();
+    REQUIRE(after_wait - before_wait >= 300ms);
 }
