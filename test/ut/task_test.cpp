@@ -2,12 +2,15 @@
 // Created by netcan on 2021/10/11.
 //
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/catch_approx.hpp>
 #include <asyncio/event_loop.h>
 #include <asyncio/task.h>
 #include <asyncio/gather.h>
+#include <asyncio/exception.h>
 #include <functional>
 
 using namespace ASYNCIO_NS;
+using namespace Catch;
 
 template<typename...> struct dump;
 template<size_t N>
@@ -162,6 +165,20 @@ SCENARIO("test gather") {
         REQUIRE(b == 6);
         REQUIRE(c == 24);
     }());
+}
+
+SCENARIO("test exception") {
+    EventLoop& loop = get_event_loop();
+    SECTION("normal exception") {
+        auto div = [](int a, int b) -> Task<double> {
+            if (b == 0) { throw std::overflow_error("b is 0!"); }
+            co_return a / b;
+        };
+        REQUIRE(loop.run_until_complete(div(4, 2)) == Approx(2));
+        auto f = [] { throw std::overflow_error("b is 0!"); };
+        REQUIRE_THROWS_AS(loop.run_until_complete(div(4, 0)), std::overflow_error);
+    }
+
 }
 
 SCENARIO("test") {

@@ -8,6 +8,7 @@
 #include <asyncio/event_loop.h>
 #include <coroutine>
 #include <cassert>
+#include <variant>
 #include <memory>
 
 ASYNCIO_NS_BEGIN
@@ -61,16 +62,34 @@ struct Task: private NonCopyable {
     struct promise_result {
         template<class U>
         void return_value(U &&result) noexcept {
-            result_ = std::forward<U>(result);
+            result_ = R(std::forward<U>(result));
         }
-        R& result() noexcept { return result_; }
+        void unhandled_exception() noexcept {
+            result_ = std::current_exception();
+        }
+        R& result() & {
+            if (auto res = std::get_if<R>(&result_)) {
+                return *res;
+            }
+            if (auto exception = std::get_if<std::exception_ptr>(&result_)) {
+                std::rethrow_exception(*exception);
+            }
+            throw std::runtime_error("result is unset");
+        }
     private:
-        R result_;
+        std::variant<std::monostate, R, std::exception_ptr> result_;
     };
 
     struct promise_void_result {
         constexpr void return_void() noexcept {}
-        constexpr void result() noexcept {}
+        void unhandled_exception() noexcept {
+            result_ = std::current_exception();
+        }
+        constexpr void result() {
+            if (result_) { std::rethrow_exception(result_); }
+        }
+    private:
+        std::exception_ptr result_;
     };
 
     using PromiseResult = std::conditional_t<std::is_void_v<R>
@@ -93,7 +112,6 @@ struct Task: private NonCopyable {
         auto final_suspend() noexcept {
             return FinalAwaiter {};
         }
-        void unhandled_exception() { std::terminate(); }
         Task get_return_object() noexcept {
             return Task{coro_handle::from_promise(*this)};
         }
@@ -129,8 +147,7 @@ struct SleepAwaiter {
     template<typename Promise>
     void await_suspend(std::coroutine_handle<Promise> caller) const noexcept {
         auto& loop = get_event_loop();
-        loop.call_later(delay_ * 1000,
-                        caller.promise());
+        loop.call_later(delay_ * 1000, caller.promise());
     }
     double delay_;
 };
