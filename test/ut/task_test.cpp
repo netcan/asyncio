@@ -7,6 +7,7 @@
 #include <asyncio/task.h>
 #include <asyncio/gather.h>
 #include <asyncio/exception.h>
+#include <asyncio/sleep.h>
 #include <functional>
 
 using namespace ASYNCIO_NS;

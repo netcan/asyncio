@@ -6,6 +6,7 @@
 #define ASYNCIO_GATHER_H
 #include <asyncio/asyncio_ns.h>
 #include <asyncio/void_value.h>
+#include <asyncio/schedule_task.h>
 #include <asyncio/awaitable_traits.h>
 #include <tuple>
 ASYNCIO_NS_BEGIN
@@ -27,7 +28,7 @@ struct GatherAwaiter {
         continuation_ = &continuation.promise();
     }
 
-    template<typename... Futs, size_t ...Is>
+    template<concepts::Future... Futs, size_t ...Is>
     GatherAwaiter(std::index_sequence<Is...>, Futs &&... futs)
     : tasks_{ std::make_tuple(collect_result<Is>(std::forward<Futs>(futs))...) }
     {
@@ -58,7 +59,7 @@ private:
 
 }
 
-template<typename... Futs>
+template<concepts::Future... Futs>
 auto gather(Futs&&... futs) {
     return detail::GatherAwaiter<detail::GetResultT_t<AwaitResult<Futs>>...>
     { std::make_index_sequence<sizeof...(Futs)>{}, std::forward<Futs>(futs)... };

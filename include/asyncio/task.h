@@ -12,8 +12,6 @@
 #include <memory>
 
 ASYNCIO_NS_BEGIN
-
-///////////////////////////////////////////////////////////////////////////////
 template<typename R = void>
 struct Task: private NonCopyable {
     struct promise_type;
@@ -34,7 +32,7 @@ struct Task: private NonCopyable {
         }
     }
 
-    R get_result() {
+    decltype(auto) get_result() {
         return handle_.promise().result();
     }
 
@@ -138,33 +136,6 @@ struct Task: private NonCopyable {
     explicit Task(coro_handle h) noexcept: handle_(h) {}
     coro_handle handle_;
 };
-
-///////////////////////////////////////////////////////////////////////////////
-namespace detail {
-struct SleepAwaiter {
-    constexpr bool await_ready() noexcept { return false; }
-    constexpr void await_resume() const noexcept {}
-    template<typename Promise>
-    void await_suspend(std::coroutine_handle<Promise> caller) const noexcept {
-        auto& loop = get_event_loop();
-        loop.call_later(delay_ * 1000, caller.promise());
-    }
-    double delay_;
-};
-}
-
-[[nodiscard]]
-auto sleep(double delay /* second */) {
-    return detail::SleepAwaiter {delay};
-}
-
-template<typename Fut>
-[[nodiscard("discard(detached) a task will not schedule to run")]]
-decltype(auto) schedule_task(Fut&& fut) {
-    auto& loop = get_event_loop();
-    loop.call_soon(fut.get_resumable());
-    return std::forward<Fut>(fut);
-}
 
 ASYNCIO_NS_END
 #endif // ASYNCIO_TASK_H

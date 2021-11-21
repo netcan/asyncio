@@ -13,7 +13,7 @@ set(ASYNCIO_INC
         include/asyncio/event_loop.h
         include/asyncio/runner.h
         include/asyncio/handle.h
-        include/asyncio/concept.h
+        include/asyncio/concept/future.h
         include/asyncio/noncopyable.h
         include/asyncio/selector/epoll_selector.h
         include/asyncio/selector/kqueue_selector.h
@@ -26,7 +26,7 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 
 add_library(asyncio STATIC
         ${ASYNC_INC}
-        src/event_loop.cpp src/task.cpp include/asyncio/exception.h)
+        src/event_loop.cpp src/task.cpp include/asyncio/exception.h include/asyncio/wait_for.h include/asyncio/sleep.h include/asyncio/schedule_task.h)
 
 add_subdirectory(test)
 add_subdirectory(third_party)

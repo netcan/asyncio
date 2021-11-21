@@ -7,6 +7,8 @@
 #include <string>
 #include <asyncio/task.h>
 #include <asyncio/runner.h>
+#include <asyncio/sleep.h>
+#include <asyncio/schedule_task.h>
 using namespace ASYNCIO_NS;
 
 Task<std::string_view> hello() {
