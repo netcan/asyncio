@@ -41,8 +41,8 @@ private:
     template<concepts::Awaitable Fut>
     Task<> wait_for_task(NoWaitAtInitialSuspend, Fut&& fut) {
         try {
-            if constexpr (std::is_void_v<R>) { co_await std::forward<Fut>(fut); }
-            else { result_ = std::move(co_await std::forward<Fut>(fut)); }
+            if constexpr (std::is_void_v<R>) { co_await fut; }
+            else { result_ = std::move(co_await fut); }
         } catch(...) {
             result_ = std::current_exception();
         }
@@ -80,6 +80,7 @@ WaitForAwaiter(Fut, Duration) -> WaitForAwaiter<AwaitResult<Fut>, Duration>;
 }
 
 template<concepts::Awaitable Fut, typename Rep, typename Period>
+[[nodiscard]]
 auto wait_for(Fut&& fut, std::chrono::duration<Rep, Period> timeout) {
     return detail::WaitForAwaiter { std::forward<Fut>(fut), timeout };
 }

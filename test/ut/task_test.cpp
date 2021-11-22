@@ -154,7 +154,6 @@ SCENARIO("test gather") {
     EventLoop& loop = get_event_loop();
     bool is_called = false;
     auto factorial = [&](std::string_view name, int number) -> Task<int> {
-        is_called = true;
         int r = 1;
         for (int i = 2; i <= number; ++i) {
             fmt::print("Task {}: Compute factorial({}), currently i={}...\n", name, number, i);
@@ -185,6 +184,7 @@ SCENARIO("test gather") {
                 REQUIRE(c == 24);
             }
             REQUIRE((co_await fac_lvalue) == 2);
+            is_called = true;
         }());
         REQUIRE(is_called);
     }
@@ -202,7 +202,33 @@ SCENARIO("test gather") {
             REQUIRE(a == 2);
             REQUIRE(b == 6);
             REQUIRE(c == 24);
+            is_called = true;
         }());
+        REQUIRE(is_called);
+    }
+
+    SECTION("test detach gather") {
+        REQUIRE(! is_called);
+        loop.run_until_complete([&]() -> Task<> {
+            auto res = asyncio::gather(
+                factorial("A", 2),
+                factorial("B", 3)
+            );
+            auto&& [a, b] = co_await res; // no get result, factorial is rvalue, release when detach
+            is_called = true;
+        }());
+        REQUIRE(! is_called);
+    }
+
+    SECTION("test exception gather") {
+        REQUIRE(!is_called);
+        REQUIRE_THROWS_AS(loop.run_until_complete([&]() -> Task<std::tuple<double, int>> {
+            is_called = true;
+            co_return co_await asyncio::gather(
+                int_div(4, 0),
+                factorial("B", 3)
+            );
+        }()), std::overflow_error);
         REQUIRE(is_called);
     }
 }
@@ -210,15 +236,15 @@ SCENARIO("test gather") {
 SCENARIO("test timeout") {
     EventLoop& loop = get_event_loop();
 
+    bool is_called = false;
     auto wait_duration = [&](auto duration) -> Task<int> {
         co_await sleep(duration);
         fmt::print("wait_duration finished\n");
+        is_called = true;
         co_return 0xbabababc;
     };
 
-    bool is_called = false;
     auto wait_test = [&](auto duration, auto timeout) -> Task<int> {
-        is_called = true;
         co_return co_await wait_for(wait_duration(duration), timeout);
     };
 
@@ -238,7 +264,7 @@ SCENARIO("test timeout") {
     SECTION("timeout error") {
         REQUIRE(! is_called);
         REQUIRE_THROWS_AS(loop.run_until_complete(wait_test(200ms, 100ms)), TimeoutError);
-        REQUIRE(is_called);
+        REQUIRE(! is_called);
     }
 }
 
