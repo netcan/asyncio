@@ -7,7 +7,7 @@
 #include <asyncio/asyncio_ns.h>
 #include <asyncio/void_value.h>
 #include <asyncio/schedule_task.h>
-#include <asyncio/awaitable_traits.h>
+#include <asyncio/concept/awaitable.h>
 #include <tuple>
 ASYNCIO_NS_BEGIN
 namespace detail {
@@ -21,12 +21,12 @@ struct GatherAwaiter {
         continuation_ = &continuation.promise();
     }
 
-    template<concepts::Future... Futs>
+    template<concepts::Awaitable... Futs>
     GatherAwaiter(Futs&&... futs)
     : GatherAwaiter( std::make_index_sequence<sizeof...(Futs)>{}
                    , std::forward<Futs>(futs)...) { }
 private:
-    template<concepts::Future... Futs, size_t ...Is>
+    template<concepts::Awaitable... Futs, size_t ...Is>
     GatherAwaiter(std::index_sequence<Is...>, Futs &&... futs)
             : tasks_{ std::make_tuple(collect_result<Is>(std::forward<Futs>(futs))...) } {
         std::apply([]<typename... Ts>(Ts&&... tasks) {
@@ -44,19 +44,19 @@ private:
         }
     }
 private:
-    [[no_unique_address]] std::tuple<Rs...> result_;
+    [[no_unique_address]] std::tuple<GetTypeIfVoid_t<Rs>...> result_;
     std::tuple<Task<std::void_t<Rs>>...> tasks_;
     Handle* continuation_{};
     int count{0};
 };
 
-template<concepts::Future... Futs> // C++17 deduction guide
-GatherAwaiter(Futs&&...) -> GatherAwaiter<GetTypeIfVoid_t<AwaitResult<Futs>>...>;
+template<concepts::Awaitable... Futs> // C++17 deduction guide
+GatherAwaiter(Futs&&...) -> GatherAwaiter<AwaitResult<Futs>...>;
 }
 
-template<concepts::Future... Futs>
-auto gather(Futs&&... futs) {
-    return detail::GatherAwaiter { std::forward<Futs>(futs)... };
+template<concepts::Awaitable... Futs>
+auto gather(Futs&&... futs) -> detail::GatherAwaiter<AwaitResult<Futs>...> {
+    return { std::forward<Futs>(futs)... };
 }
 
 ASYNCIO_NS_END

@@ -1,11 +1,11 @@
 //
-// Created by netcan on 2021/11/20.
+// Created by netcan on 2021/11/22.
 //
 
-#ifndef ASYNCIO_AWAITABLE_TRAITS_H
-#define ASYNCIO_AWAITABLE_TRAITS_H
-#include <type_traits>
+#ifndef ASYNCIO_AWAITABLE_H
+#define ASYNCIO_AWAITABLE_H
 #include <asyncio/asyncio_ns.h>
+#include <coroutine>
 ASYNCIO_NS_BEGIN
 namespace detail {
 template<typename A>
@@ -26,13 +26,20 @@ template<typename A>
 using GetAwaiter_t = typename GetAwaiter<A>::type;
 }
 
+namespace concepts {
 template<typename A>
-struct AwaitableTraits {
-    using AwaitResult = decltype(std::declval<detail::GetAwaiter_t<A>>().await_resume());
+concept Awaitable = requires {
+    typename detail::GetAwaiter_t<A>;
+    requires requires (detail::GetAwaiter_t<A> awaiter, std::coroutine_handle<> handle) {
+        { awaiter.await_ready() } -> std::convertible_to<bool>;
+        awaiter.await_suspend(handle);
+        awaiter.await_resume();
+    };
 };
+}
 
-template<typename A>
-using AwaitResult = typename AwaitableTraits<A>::AwaitResult;
+template<concepts::Awaitable A>
+using AwaitResult = decltype(std::declval<detail::GetAwaiter_t<A>>().await_resume());
 
 ASYNCIO_NS_END
-#endif // ASYNCIO_AWAITABLE_TRAITS_H
+#endif // ASYNCIO_AWAITABLE_H

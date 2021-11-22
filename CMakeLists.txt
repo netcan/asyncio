@@ -17,16 +17,21 @@ set(ASYNCIO_INC
         include/asyncio/noncopyable.h
         include/asyncio/selector/epoll_selector.h
         include/asyncio/selector/kqueue_selector.h
-        include/asyncio/selector/event.h include/asyncio/selector/selector.h
+        include/asyncio/selector/event.h
+        include/asyncio/selector/selector.h
         include/asyncio/void_value.h
-        include/asyncio/awaitable_traits.h
+        include/asyncio/exception.h
+        include/asyncio/wait_for.h
+        include/asyncio/sleep.h
+        include/asyncio/schedule_task.h
+        include/asyncio/concept/awaitable.h
         include/asyncio/gather.h)
 
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
 add_library(asyncio STATIC
         ${ASYNC_INC}
-        src/event_loop.cpp src/task.cpp include/asyncio/exception.h include/asyncio/wait_for.h include/asyncio/sleep.h include/asyncio/schedule_task.h)
+        src/event_loop.cpp)
 
 add_subdirectory(test)
 add_subdirectory(third_party)

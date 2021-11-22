@@ -6,7 +6,7 @@
 #define ASYNCIO_WAIT_FOR_H
 #include <asyncio/asyncio_ns.h>
 #include <asyncio/concept/future.h>
-#include <asyncio/awaitable_traits.h>
+#include <asyncio/concept/awaitable.h>
 #include <asyncio/schedule_task.h>
 #include <asyncio/event_loop.h>
 #include <asyncio/exception.h>
@@ -33,13 +33,13 @@ struct WaitForAwaiter {
         continuation_ = &caller.promise();
     }
 
-    template<concepts::Future Fut>
+    template<concepts::Awaitable Fut>
     WaitForAwaiter(Fut&& fut, Duration timeout)
             : wait_for_task_(schedule_task(wait_for_task(std::forward<Fut>(fut))))
             , timeout_handle_(*this, timeout, fut.get_resumable()) { }
 
 private:
-    template<concepts::Future Fut>
+    template<concepts::Awaitable Fut>
     Task<> wait_for_task(Fut&& fut) {
         try {
             if constexpr (std::is_void_v<R>) { co_await schedule_task(std::forward<Fut>(fut)); }
@@ -76,11 +76,11 @@ private:
     } timeout_handle_;
 };
 
-template<concepts::Future Fut, typename Duration>
+template<concepts::Awaitable Fut, typename Duration>
 WaitForAwaiter(Fut, Duration) -> WaitForAwaiter<AwaitResult<Fut>, Duration>;
 }
 
-template<concepts::Future Fut, typename Rep, typename Period>
+template<concepts::Awaitable Fut, typename Rep, typename Period>
 auto wait_for(Fut&& fut, std::chrono::duration<Rep, Period> timeout) {
     return detail::WaitForAwaiter { std::forward<Fut>(fut), timeout };
 }
