@@ -20,14 +20,12 @@ class EventLoop: private NonCopyable {
 
 public:
     EventLoop() {
-        using namespace std::chrono;
-        auto now = system_clock::now();
+        auto now = std::chrono::system_clock::now();
         start_time_ = duration_cast<MSDuration>(now.time_since_epoch());
     }
 
     MSDuration time() {
-        using namespace std::chrono;
-        auto now = system_clock::now();
+        auto now = std::chrono::system_clock::now();
         return duration_cast<MSDuration>(now.time_since_epoch()) - start_time_;
     }
 
@@ -35,13 +33,15 @@ public:
         return schedule_.empty() && ready_.empty();
     }
 
-    void call_later(MSDuration delay, Handle& callback) {
-        call_at(time() + delay, callback);
+    template<typename Rep, typename Period>
+    void call_later(std::chrono::duration<Rep, Period> delay, Handle& callback) {
+        call_at(time() + duration_cast<MSDuration>(delay), callback);
     }
 
-    void call_at(MSDuration when, Handle& callback) {
+    template<typename Rep, typename Period>
+    void call_at(std::chrono::duration<Rep, Period> when, Handle& callback) {
         callback.set_state(PromiseState::PENDING);
-        schedule_.emplace_back(std::make_pair(when, &callback));
+        schedule_.emplace_back(std::make_pair(duration_cast<MSDuration>(when), &callback));
         std::ranges::push_heap(schedule_, std::ranges::greater{}, &TimerHandle::first);
     }
 

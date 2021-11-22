@@ -6,8 +6,10 @@
 #define ASYNCIO_WAIT_FOR_H
 #include <asyncio/asyncio_ns.h>
 #include <asyncio/concept/future.h>
+#include <asyncio/awaitable_traits.h>
 #include <asyncio/schedule_task.h>
 #include <asyncio/event_loop.h>
+#include <asyncio/exception.h>
 #include <asyncio/void_value.h>
 #include <chrono>
 ASYNCIO_NS_BEGIN

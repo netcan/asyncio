@@ -145,7 +145,7 @@ SCENARIO("test gather") {
         int r = 1;
         for (int i = 2; i <= number; ++i) {
             fmt::print("Task {}: Compute factorial({}), currently i={}...\n", name, number, i);
-            co_await asyncio::sleep(500ms);
+            co_await asyncio::sleep(0.3s);
             r *= i;
         }
         fmt::print("Task {}: factorial({}) = {}\n", name, number, r);
