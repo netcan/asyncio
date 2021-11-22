@@ -7,7 +7,6 @@
 #include <asyncio/asyncio_ns.h>
 #include <asyncio/concept/future.h>
 #include <asyncio/concept/awaitable.h>
-#include <asyncio/schedule_task.h>
 #include <asyncio/event_loop.h>
 #include <asyncio/exception.h>
 #include <asyncio/void_value.h>
@@ -35,15 +34,15 @@ struct WaitForAwaiter {
 
     template<concepts::Awaitable Fut>
     WaitForAwaiter(Fut&& fut, Duration timeout)
-            : wait_for_task_(schedule_task(wait_for_task(std::forward<Fut>(fut))))
+            : wait_for_task_(wait_for_task(non_wait_at_initial_suspend, std::forward<Fut>(fut)))
             , timeout_handle_(*this, timeout, fut.get_resumable()) { }
 
 private:
     template<concepts::Awaitable Fut>
-    Task<> wait_for_task(Fut&& fut) {
+    Task<> wait_for_task(NoWaitAtInitialSuspend, Fut&& fut) {
         try {
-            if constexpr (std::is_void_v<R>) { co_await schedule_task(std::forward<Fut>(fut)); }
-            else { result_ = std::move(co_await schedule_task(std::forward<Fut>(fut))); }
+            if constexpr (std::is_void_v<R>) { co_await std::forward<Fut>(fut); }
+            else { result_ = std::move(co_await std::forward<Fut>(fut)); }
         } catch(...) {
             result_ = std::current_exception();
         }

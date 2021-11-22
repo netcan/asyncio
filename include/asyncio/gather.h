@@ -6,7 +6,6 @@
 #define ASYNCIO_GATHER_H
 #include <asyncio/asyncio_ns.h>
 #include <asyncio/void_value.h>
-#include <asyncio/schedule_task.h>
 #include <asyncio/concept/awaitable.h>
 #include <tuple>
 ASYNCIO_NS_BEGIN
@@ -24,21 +23,17 @@ struct GatherAwaiter {
     template<concepts::Awaitable... Futs>
     GatherAwaiter(Futs&&... futs)
     : GatherAwaiter( std::make_index_sequence<sizeof...(Futs)>{}
-                   , std::forward<Futs>(futs)...) { }
+                   , std::forward<Futs>(futs)...) {}
 private:
     template<concepts::Awaitable... Futs, size_t ...Is>
-    GatherAwaiter(std::index_sequence<Is...>, Futs &&... futs)
-            : tasks_{ std::make_tuple(collect_result<Is>(std::forward<Futs>(futs))...) } {
-        std::apply([]<typename... Ts>(Ts&&... tasks) {
-            // use fold expression to guarantee order
-            ((void) asyncio::schedule_task(std::forward<Ts>(tasks)), ...);
-        }, tasks_);
+    GatherAwaiter(std::index_sequence<Is...>, Futs&&... futs)
+            : tasks_{ std::make_tuple(collect_result<Is>(non_wait_at_initial_suspend, std::forward<Futs>(futs))...) } {
     }
 
     template<size_t Idx, typename Fut>
-    Task<> collect_result(Fut&& fut) { // TODO: exception handle
-        if constexpr (std::is_void_v<AwaitResult<Fut>>) { co_await schedule_task(std::forward<Fut>(fut)); }
-        else { std::get<Idx>(result_) = std::move(co_await schedule_task(std::forward<Fut>(fut))); }
+    Task<> collect_result(NoWaitAtInitialSuspend, Fut&& fut) { // TODO: exception handle
+        if constexpr (std::is_void_v<AwaitResult<Fut>>) { co_await std::forward<Fut>(fut); }
+        else { std::get<Idx>(result_) = std::move(co_await std::forward<Fut>(fut)); }
         if (++count == sizeof...(Rs) && continuation_) {
             get_event_loop().call_soon(*continuation_);
         }

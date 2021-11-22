@@ -8,6 +8,7 @@
 #include <asyncio/gather.h>
 #include <asyncio/exception.h>
 #include <asyncio/sleep.h>
+#include <asyncio/schedule_task.h>
 #include <asyncio/wait_for.h>
 #include <functional>
 
@@ -136,12 +137,24 @@ SCENARIO("test schedule_task") {
         REQUIRE(result.size() == 1);
         REQUIRE(result[0] == 0xabab);
     }
+}
 
+auto int_div(int a, int b) -> Task<double> {
+    if (b == 0) { throw std::overflow_error("b is 0!"); }
+    co_return a / b;
+};
+
+SCENARIO("test exception") {
+    EventLoop& loop = get_event_loop();
+    REQUIRE(loop.run_until_complete(int_div(4, 2)) == Approx(2));
+    REQUIRE_THROWS_AS(loop.run_until_complete(int_div(4, 0)), std::overflow_error);
 }
 
 SCENARIO("test gather") {
     EventLoop& loop = get_event_loop();
-    auto factorial = [](std::string_view name, int number) -> Task<int> {
+    bool is_called = false;
+    auto factorial = [&](std::string_view name, int number) -> Task<int> {
+        is_called = true;
         int r = 1;
         for (int i = 2; i <= number; ++i) {
             fmt::print("Task {}: Compute factorial({}), currently i={}...\n", name, number, i);
@@ -156,30 +169,42 @@ SCENARIO("test gather") {
         co_return;
     };
 
-    loop.run_until_complete([&]() -> Task<> {
-        auto&& [a, b, c, _void] = co_await asyncio::gather(
-                factorial("A", 2),
-                factorial("B", 3),
-                factorial("C", 4),
-                test_void_func()
-        );
-        REQUIRE(a == 2);
-        REQUIRE(b == 6);
-        REQUIRE(c == 24);
-    }());
-}
+    SECTION("test lvalue & rvalue gather") {
+        REQUIRE(! is_called);
+        loop.run_until_complete([&]() -> Task<> {
+            auto fac_lvalue = factorial("A", 2);
+            {
+                auto&& [a, b, c, _void] = co_await asyncio::gather(
+                        fac_lvalue,
+                        factorial("B", 3),
+                        factorial("C", 4),
+                        test_void_func()
+                );
+                REQUIRE(a == 2);
+                REQUIRE(b == 6);
+                REQUIRE(c == 24);
+            }
+            REQUIRE((co_await fac_lvalue) == 2);
+        }());
+        REQUIRE(is_called);
+    }
 
-auto int_div(int a, int b) -> Task<double> {
-    if (b == 0) { throw std::overflow_error("b is 0!"); }
-    co_return a / b;
-};
-
-SCENARIO("test exception") {
-    EventLoop& loop = get_event_loop();
-
-    REQUIRE(loop.run_until_complete(int_div(4, 2)) == Approx(2));
-    auto f = [] { throw std::overflow_error("b is 0!"); };
-    REQUIRE_THROWS_AS(loop.run_until_complete(int_div(4, 0)), std::overflow_error);
+    SECTION("test gather of gather") {
+        REQUIRE(!is_called);
+        loop.run_until_complete([&]() -> Task<> {
+            auto&& [ab, c, _void] = co_await asyncio::gather(
+                    gather(factorial("A", 2),
+                           factorial("B", 3)),
+                    factorial("C", 4),
+                    test_void_func()
+            );
+            auto&& [a, b] = ab;
+            REQUIRE(a == 2);
+            REQUIRE(b == 6);
+            REQUIRE(c == 24);
+        }());
+        REQUIRE(is_called);
+    }
 }
 
 SCENARIO("test timeout") {
@@ -191,23 +216,29 @@ SCENARIO("test timeout") {
         co_return 0xbabababc;
     };
 
+    bool is_called = false;
     auto wait_test = [&](auto duration, auto timeout) -> Task<int> {
+        is_called = true;
         co_return co_await wait_for(wait_duration(duration), timeout);
     };
 
     SECTION("no timeout") {
+        REQUIRE(! is_called);
         REQUIRE(loop.run_until_complete(wait_test(12ms, 12000ms)) == 0xbabababc);
+        REQUIRE(is_called);
     }
 
     SECTION("notime out with exception") {
         REQUIRE_THROWS_AS(
-                loop.run_until_complete([]() -> Task<> {
-                    auto v = co_await wait_for(int_div(5, 0), 100ms);
-                }()), std::overflow_error);
+            loop.run_until_complete([]() -> Task<> {
+                auto v = co_await wait_for(int_div(5, 0), 100ms);
+            }()), std::overflow_error);
     }
 
     SECTION("timeout error") {
+        REQUIRE(! is_called);
         REQUIRE_THROWS_AS(loop.run_until_complete(wait_test(200ms, 100ms)), TimeoutError);
+        REQUIRE(is_called);
     }
 }
 

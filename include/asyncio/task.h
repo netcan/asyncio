@@ -12,6 +12,8 @@
 #include <memory>
 
 ASYNCIO_NS_BEGIN
+struct NoWaitAtInitialSuspend {};
+inline constexpr NoWaitAtInitialSuspend non_wait_at_initial_suspend;
 template<typename R = void>
 struct Task: private NonCopyable {
     struct promise_type;
@@ -98,8 +100,23 @@ struct Task: private NonCopyable {
             , promise_void_result
             , promise_result>;
 
+    template<typename ...> struct dump;
     struct promise_type: PromiseResult, Handle {
-        auto initial_suspend() noexcept { return std::suspend_always{}; }
+        promise_type() = default;
+        template<typename... Args> // from free function
+        promise_type(NoWaitAtInitialSuspend, Args&&...): wait_at_initial_suspend_{false} { }
+        template<typename Obj, typename... Args> // from member function
+        promise_type(Obj&&, NoWaitAtInitialSuspend, Args&&...): wait_at_initial_suspend_{false} { }
+
+        auto initial_suspend() noexcept {
+            struct InitialSuspendAwaiter {
+                constexpr bool await_ready() const noexcept { return !wait_at_initial_suspend_; }
+                constexpr void await_suspend(std::coroutine_handle<>) const noexcept {}
+                constexpr void await_resume() const noexcept {}
+                const bool wait_at_initial_suspend_{true};
+            };
+            return InitialSuspendAwaiter{wait_at_initial_suspend_};
+        }
         struct FinalAwaiter {
             constexpr bool await_ready() const noexcept { return false; }
             template<typename Promise>
@@ -131,6 +148,7 @@ struct Task: private NonCopyable {
 
         // to auto delete by final awaiter
         PromiseState state_ {PromiseState::UNSCHEDULED};
+        const bool wait_at_initial_suspend_ {true};
         Handle* continuation_ {};
     };
 
