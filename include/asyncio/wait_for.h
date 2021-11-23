@@ -41,8 +41,8 @@ private:
     template<concepts::Awaitable Fut>
     Task<> wait_for_task(NoWaitAtInitialSuspend, Fut&& fut) {
         try {
-            if constexpr (std::is_void_v<R>) { co_await fut; }
-            else { result_ = std::move(co_await fut); }
+            if constexpr (std::is_void_v<R>) { co_await std::forward<Fut>(fut); }
+            else { result_ = std::move(co_await std::forward<Fut>(fut)); }
         } catch(...) {
             result_ = std::current_exception();
         }
@@ -77,12 +77,30 @@ private:
 
 template<concepts::Awaitable Fut, typename Duration>
 WaitForAwaiter(Fut, Duration) -> WaitForAwaiter<AwaitResult<Fut>, Duration>;
+
+template<concepts::Awaitable Fut, typename Duration>
+struct WaitForAwaiterRegistry {
+    WaitForAwaiterRegistry(Fut&& fut, Duration duration)
+    : fut_(std::forward<Fut>(fut)), duration_(duration)
+    { }
+
+    auto operator co_await () && {
+        return WaitForAwaiter{std::move(fut_), duration_};
+    }
+private:
+    Fut fut_;
+    Duration duration_;
+};
+
+template<concepts::Awaitable Fut, typename Duration>
+WaitForAwaiterRegistry(Fut&& fut, Duration duration)
+-> WaitForAwaiterRegistry<Fut, Duration>;
 }
 
 template<concepts::Awaitable Fut, typename Rep, typename Period>
-[[nodiscard]]
+[[nodiscard("discard wait_for doesn't make sense")]]
 auto wait_for(Fut&& fut, std::chrono::duration<Rep, Period> timeout) {
-    return detail::WaitForAwaiter { std::forward<Fut>(fut), timeout };
+    return detail::WaitForAwaiterRegistry { std::forward<Fut>(fut), timeout };
 }
 ASYNCIO_NS_END
 #endif // ASYNCIO_WAIT_FOR_H

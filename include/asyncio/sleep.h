@@ -23,12 +23,19 @@ struct SleepAwaiter: private NonCopyable {
 private:
     Duration delay_;
 };
+template<typename Duration>
+struct SleepAwaiterRepositry {
+    auto operator co_await () && {
+        return SleepAwaiter{delay_};
+    }
+    Duration delay_;
+};
 }
 
 template<typename Rep, typename Period>
-[[nodiscard]]
+[[nodiscard("discard sleep doesn't make sense")]]
 auto sleep(std::chrono::duration<Rep, Period> delay /* second */) {
-    return detail::SleepAwaiter {delay};
+    return detail::SleepAwaiterRepositry {delay};
 }
 
 using namespace std::chrono_literals;

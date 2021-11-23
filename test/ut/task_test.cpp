@@ -172,11 +172,13 @@ SCENARIO("test gather") {
         REQUIRE(! is_called);
         loop.run_until_complete([&]() -> Task<> {
             auto fac_lvalue = factorial("A", 2);
+            auto fac_xvalue = factorial("B", 3);
+            auto&& fac_rvalue = factorial("C", 4);
             {
                 auto&& [a, b, c, _void] = co_await asyncio::gather(
                         fac_lvalue,
-                        factorial("B", 3),
-                        factorial("C", 4),
+                        static_cast<Task<int>&&>(fac_xvalue),
+                        std::move(fac_rvalue),
                         test_void_func()
                 );
                 REQUIRE(a == 2);
@@ -184,6 +186,8 @@ SCENARIO("test gather") {
                 REQUIRE(c == 24);
             }
             REQUIRE((co_await fac_lvalue) == 2);
+            REQUIRE(fac_xvalue.handle_ == nullptr);
+            REQUIRE(fac_rvalue.handle_ == nullptr);
             is_called = true;
         }());
         REQUIRE(is_called);
@@ -209,15 +213,17 @@ SCENARIO("test gather") {
 
     SECTION("test detach gather") {
         REQUIRE(! is_called);
+        auto res = asyncio::gather(
+            factorial("A", 2),
+            factorial("B", 3)
+        );
         loop.run_until_complete([&]() -> Task<> {
-            auto res = asyncio::gather(
-                factorial("A", 2),
-                factorial("B", 3)
-            );
-            auto&& [a, b] = co_await res; // no get result, factorial is rvalue, release when detach
+            auto&& [a, b] = co_await std::move(res);
+            REQUIRE(a == 2);
+            REQUIRE(b == 6);
             is_called = true;
         }());
-        REQUIRE(! is_called);
+        REQUIRE(is_called);
     }
 
     SECTION("test exception gather") {
@@ -244,13 +250,13 @@ SCENARIO("test timeout") {
         co_return 0xbabababc;
     };
 
-    auto wait_test = [&](auto duration, auto timeout) -> Task<int> {
+    auto wait_for_test = [&](auto duration, auto timeout) -> Task<int> {
         co_return co_await wait_for(wait_duration(duration), timeout);
     };
 
     SECTION("no timeout") {
         REQUIRE(! is_called);
-        REQUIRE(loop.run_until_complete(wait_test(12ms, 12000ms)) == 0xbabababc);
+        REQUIRE(loop.run_until_complete(wait_for_test(12ms, 12000ms)) == 0xbabababc);
         REQUIRE(is_called);
     }
 
@@ -263,7 +269,7 @@ SCENARIO("test timeout") {
 
     SECTION("timeout error") {
         REQUIRE(! is_called);
-        REQUIRE_THROWS_AS(loop.run_until_complete(wait_test(200ms, 100ms)), TimeoutError);
+        REQUIRE_THROWS_AS(loop.run_until_complete(wait_for_test(200ms, 100ms)), TimeoutError);
         REQUIRE(! is_called);
     }
 }

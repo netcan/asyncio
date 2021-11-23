@@ -43,8 +43,8 @@ private:
     Task<> collect_result(NoWaitAtInitialSuspend, Fut&& fut) {
         try {
             auto& results = std::get<ResultTypes>(result_);
-            if constexpr (std::is_void_v<AwaitResult<Fut>>) { co_await fut; }
-            else { std::get<Idx>(results) = std::move(co_await fut); }
+            if constexpr (std::is_void_v<AwaitResult<Fut>>) { co_await std::forward<Fut>(fut); }
+            else { std::get<Idx>(results) = std::move(co_await std::forward<Fut>(fut)); }
             ++count_;
         } catch(...) {
             result_ = std::current_exception();
@@ -67,12 +67,36 @@ private:
 
 template<concepts::Awaitable... Futs> // C++17 deduction guide
 GatherAwaiter(Futs&&...) -> GatherAwaiter<AwaitResult<Futs>...>;
+
+template<concepts::Awaitable... Futs>
+struct GatherAwaiterRepositry {
+    GatherAwaiterRepositry(Futs&&... futs)
+    : futs_(std::forward<Futs>(futs)...) { }
+
+    auto operator co_await() & {
+        return std::apply([]<concepts::Awaitable... F>(F&&... f) {
+            return GatherAwaiter { std::forward<F>(f)... };
+        }, futs_);
+    }
+
+    auto operator co_await() && {
+        return std::apply([]<concepts::Awaitable... F>(F&&... f) {
+            return GatherAwaiter { std::forward<F>(f)... };
+        }, std::move(futs_));
+    }
+
+private:
+    std::tuple<Futs...> futs_;
+};
+
+template<concepts::Awaitable... Futs>
+GatherAwaiterRepositry(Futs&&...) -> GatherAwaiterRepositry<Futs...>;
 }
 
 template<concepts::Awaitable... Futs>
-[[nodiscard]]
-auto gather(Futs&&... futs) -> detail::GatherAwaiter<AwaitResult<Futs>...> {
-    return { std::forward<Futs>(futs)... };
+[[nodiscard("dicard gather doesn't make sense")]]
+auto gather(Futs&&... futs) {
+    return detail::GatherAwaiterRepositry{ std::forward<Futs>(futs)... };
 }
 
 ASYNCIO_NS_END
