@@ -30,12 +30,14 @@ struct WaitForAwaiter {
     template<typename Promise>
     void await_suspend(std::coroutine_handle<Promise> caller) noexcept {
         continuation_ = &caller.promise();
+        continuation_->set_state(PromiseState::PENDING);
     }
 
     template<concepts::Awaitable Fut>
     WaitForAwaiter(Fut&& fut, Duration timeout)
-            : wait_for_task_(wait_for_task(non_wait_at_initial_suspend, std::forward<Fut>(fut)))
-            , timeout_handle_(*this, timeout, fut.get_resumable()) { }
+            : wait_for_task_(wait_for_task(no_wait_at_initial_suspend, std::forward<Fut>(fut)))
+            , timeout_handle_(*this, timeout, fut.get_resumable())
+            { }
 
 private:
     template<concepts::Awaitable Fut>
@@ -81,8 +83,7 @@ WaitForAwaiter(Fut, Duration) -> WaitForAwaiter<AwaitResult<Fut>, Duration>;
 template<concepts::Awaitable Fut, typename Duration>
 struct WaitForAwaiterRegistry {
     WaitForAwaiterRegistry(Fut&& fut, Duration duration)
-    : fut_(std::forward<Fut>(fut)), duration_(duration)
-    { }
+    : fut_(std::forward<Fut>(fut)), duration_(duration) { }
 
     auto operator co_await () && {
         return WaitForAwaiter{std::move(fut_), duration_};
@@ -95,12 +96,18 @@ private:
 template<concepts::Awaitable Fut, typename Duration>
 WaitForAwaiterRegistry(Fut&& fut, Duration duration)
 -> WaitForAwaiterRegistry<Fut, Duration>;
+
+template<concepts::Awaitable Fut, typename Rep, typename Period>
+auto wait_for(NoWaitAtInitialSuspend, Fut&& fut, std::chrono::duration<Rep, Period> timeout)
+-> Task<AwaitResult<Fut>> {
+    co_return co_await WaitForAwaiterRegistry { std::forward<Fut>(fut), timeout };
+}
 }
 
 template<concepts::Awaitable Fut, typename Rep, typename Period>
 [[nodiscard("discard wait_for doesn't make sense")]]
 auto wait_for(Fut&& fut, std::chrono::duration<Rep, Period> timeout) {
-    return detail::WaitForAwaiterRegistry { std::forward<Fut>(fut), timeout };
+    return detail::wait_for(no_wait_at_initial_suspend, std::forward<Fut>(fut), timeout);
 }
 ASYNCIO_NS_END
 #endif // ASYNCIO_WAIT_FOR_H

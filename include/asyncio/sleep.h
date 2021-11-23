@@ -23,19 +23,17 @@ struct SleepAwaiter: private NonCopyable {
 private:
     Duration delay_;
 };
-template<typename Duration>
-struct SleepAwaiterRepositry {
-    auto operator co_await () && {
-        return SleepAwaiter{delay_};
-    }
-    Duration delay_;
-};
+
+template<typename Rep, typename Period>
+auto sleep(NoWaitAtInitialSuspend, std::chrono::duration<Rep, Period> delay /* second */) -> Task<void> {
+    co_return co_await detail::SleepAwaiter {delay};
+}
 }
 
 template<typename Rep, typename Period>
 [[nodiscard("discard sleep doesn't make sense")]]
-auto sleep(std::chrono::duration<Rep, Period> delay /* second */) {
-    return detail::SleepAwaiterRepositry {delay};
+auto sleep(std::chrono::duration<Rep, Period> delay /* second */) -> Task<void> {
+    return detail::sleep(no_wait_at_initial_suspend, delay);
 }
 
 using namespace std::chrono_literals;

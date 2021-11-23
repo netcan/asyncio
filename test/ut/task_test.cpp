@@ -157,7 +157,7 @@ SCENARIO("test gather") {
         int r = 1;
         for (int i = 2; i <= number; ++i) {
             fmt::print("Task {}: Compute factorial({}), currently i={}...\n", name, number, i);
-            co_await asyncio::sleep(0.3s);
+            co_await asyncio::sleep(0.1s);
             r *= i;
         }
         fmt::print("Task {}: factorial({}) = {}\n", name, number, r);
@@ -186,8 +186,8 @@ SCENARIO("test gather") {
                 REQUIRE(c == 24);
             }
             REQUIRE((co_await fac_lvalue) == 2);
-            REQUIRE(fac_xvalue.handle_ == nullptr);
-            REQUIRE(fac_rvalue.handle_ == nullptr);
+            REQUIRE(! fac_xvalue.valid());
+            REQUIRE(! fac_rvalue.valid());
             is_called = true;
         }());
         REQUIRE(is_called);
@@ -256,7 +256,28 @@ SCENARIO("test timeout") {
 
     SECTION("no timeout") {
         REQUIRE(! is_called);
-        REQUIRE(loop.run_until_complete(wait_for_test(12ms, 12000ms)) == 0xbabababc);
+        REQUIRE(loop.run_until_complete(wait_for_test(12ms, 120ms)) == 0xbabababc);
+        REQUIRE(is_called);
+    }
+
+    SECTION("wait_for with sleep") {
+        REQUIRE(! is_called);
+        loop.run_until_complete([&]() -> Task<> {
+            REQUIRE_NOTHROW(co_await wait_for(sleep(30ms), 50ms));
+            REQUIRE_THROWS_AS(co_await wait_for(sleep(50ms), 30ms), TimeoutError);
+            is_called = true;
+        }());
+        REQUIRE(is_called);
+    }
+
+    SECTION("wait_for with gather") {
+        REQUIRE(! is_called);
+        loop.run_until_complete([&]() -> Task<> {
+            REQUIRE_NOTHROW(co_await wait_for(gather(sleep(10ms), sleep(20ms), sleep(30ms)), 50ms));
+            REQUIRE_THROWS_AS(co_await wait_for(gather(sleep(10ms), sleep(80ms), sleep(30ms)), 50ms),
+                              TimeoutError);
+            is_called = true;
+        }());
         REQUIRE(is_called);
     }
 

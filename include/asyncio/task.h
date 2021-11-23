@@ -13,7 +13,7 @@
 
 ASYNCIO_NS_BEGIN
 struct NoWaitAtInitialSuspend {};
-inline constexpr NoWaitAtInitialSuspend non_wait_at_initial_suspend;
+inline constexpr NoWaitAtInitialSuspend no_wait_at_initial_suspend;
 template<typename R = void>
 struct Task: private NonCopyable {
     struct promise_type;
@@ -152,7 +152,9 @@ struct Task: private NonCopyable {
         Handle* continuation_ {};
     };
 
+    bool valid() const { return handle_ != nullptr; }
     explicit Task(coro_handle h) noexcept: handle_(h) {}
+private:
     coro_handle handle_;
 };
 
