@@ -100,8 +100,7 @@ struct Task: private NonCopyable {
             , promise_void_result
             , promise_result>;
 
-    template<typename ...> struct dump;
-    struct promise_type: PromiseResult, Handle {
+    struct promise_type: Handle, PromiseResult {
         promise_type() = default;
         template<typename... Args> // from free function
         promise_type(NoWaitAtInitialSuspend, Args&&...): wait_at_initial_suspend_{false} { }

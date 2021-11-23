@@ -27,20 +27,21 @@ public:
     template<typename Promise>
     void await_suspend(std::coroutine_handle<Promise> continuation) noexcept {
         continuation_ = &continuation.promise();
+        // set continuation_ to PENDING, don't schedule anymore, until it resume continuation_
         continuation_->set_state(PromiseState::PENDING);
     }
 
     template<concepts::Awaitable... Futs>
-    GatherAwaiter(Futs&&... futs)
+    explicit GatherAwaiter(Futs&&... futs)
     : GatherAwaiter( std::make_index_sequence<sizeof...(Futs)>{}
                    , std::forward<Futs>(futs)...) {}
 private:
     template<concepts::Awaitable... Futs, size_t ...Is>
-    GatherAwaiter(std::index_sequence<Is...>, Futs&&... futs)
-            : tasks_{ std::make_tuple(collect_result<Is>(no_wait_at_initial_suspend, std::forward<Futs>(futs))...) } {
-    }
+    explicit GatherAwaiter(std::index_sequence<Is...>, Futs&&... futs)
+            : tasks_{ std::make_tuple(collect_result<Is>(no_wait_at_initial_suspend, std::forward<Futs>(futs))...) }
+            { }
 
-    template<size_t Idx, typename Fut>
+    template<size_t Idx, concepts::Awaitable Fut>
     Task<> collect_result(NoWaitAtInitialSuspend, Fut&& fut) {
         try {
             auto& results = std::get<ResultTypes>(result_);
@@ -71,7 +72,7 @@ GatherAwaiter(Futs&&...) -> GatherAwaiter<AwaitResult<Futs>...>;
 
 template<concepts::Awaitable... Futs>
 struct GatherAwaiterRepositry {
-    GatherAwaiterRepositry(Futs&&... futs)
+    explicit GatherAwaiterRepositry(Futs&&... futs)
     : futs_(std::forward<Futs>(futs)...) { }
 
     auto operator co_await() && {
@@ -81,21 +82,25 @@ struct GatherAwaiterRepositry {
     }
 
 private:
+    // futs_ to lift Future's lifetime
+    // 1. if Future is rvalue(Fut&&), then move it to tuple(Fut)
+    // 2. if Future is xvalue(Fut&&), then move it to tuple(Fut)
+    // 3. if Future is lvalue(Fut&), then store as lvalue-ref(Fut&)
     std::tuple<Futs...> futs_;
 };
 
-template<concepts::Awaitable... Futs>
+template<concepts::Awaitable... Futs> // need deduction guide to deduce future type
 GatherAwaiterRepositry(Futs&&...) -> GatherAwaiterRepositry<Futs...>;
 
 template<concepts::Awaitable... Futs>
-auto gather(NoWaitAtInitialSuspend, Futs&&... futs)
+auto gather(NoWaitAtInitialSuspend, Futs&&... futs) // need NoWaitAtInitialSuspend to lift futures lifetime early
 -> Task<std::tuple<GetTypeIfVoid_t<AwaitResult<Futs>>...>> {
     co_return co_await detail::GatherAwaiterRepositry{ std::forward<Futs>(futs)... };
 }
 }
 
 template<concepts::Awaitable... Futs>
-[[nodiscard("dicard gather doesn't make sense")]]
+[[nodiscard("discard gather doesn't make sense")]]
 auto gather(Futs&&... futs) {
     return detail::gather(no_wait_at_initial_suspend, std::forward<Futs>(futs)...);
 }

@@ -30,6 +30,7 @@ struct WaitForAwaiter {
     template<typename Promise>
     void await_suspend(std::coroutine_handle<Promise> caller) noexcept {
         continuation_ = &caller.promise();
+        // set continuation_ to PENDING, don't schedule anymore, until it resume continuation_
         continuation_->set_state(PromiseState::PENDING);
     }
 
@@ -89,7 +90,7 @@ struct WaitForAwaiterRegistry {
         return WaitForAwaiter{std::move(fut_), duration_};
     }
 private:
-    Fut fut_;
+    Fut fut_; // lift Future's lifetime
     Duration duration_;
 };
 

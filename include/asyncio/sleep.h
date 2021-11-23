@@ -11,7 +11,7 @@ ASYNCIO_NS_BEGIN
 namespace detail {
 template<typename Duration>
 struct SleepAwaiter: private NonCopyable {
-    SleepAwaiter(Duration delay): delay_(delay) {}
+    explicit SleepAwaiter(Duration delay): delay_(delay) {}
     constexpr bool await_ready() noexcept { return false; }
     constexpr void await_resume() const noexcept {}
     template<typename Promise>
