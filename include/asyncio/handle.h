@@ -15,30 +15,21 @@ enum class PromiseState: uint8_t {
     PENDING,
 };
 
-struct HandleFrameInfo {
-    uint32_t line{0};
-    std::string_view file_name;
-    std::string_view func_name;
-    constexpr HandleFrameInfo() = default;
-    constexpr HandleFrameInfo(std::source_location loc):
-        line(loc.line()),
-        file_name(loc.file_name()),
-        func_name(loc.function_name()) {}
-};
-
 struct Handle {
     virtual void run() = 0;
-    std::string name() {
+    std::string frame_name() const {
         const auto& frame_info = get_frame_info();
-//        return fmt::format("{} at {}:{}", frame_info.func_name,
-//                           frame_info.file_name, frame_info.line);
-        return fmt::format("{} at {}", frame_info.func_name, frame_info.file_name);
+        return fmt::format("{} at {}:{}", frame_info.function_name(),
+                           frame_info.file_name(), frame_info.line());
     }
-    virtual Handle* get_continuation() { return nullptr; }
+    virtual void dump_backtrace(size_t depth = 0) const {};
     virtual void set_state(PromiseState state) {}
     virtual ~Handle() = default;
 private:
-    virtual const HandleFrameInfo& get_frame_info() = 0;
+    virtual const std::source_location& get_frame_info() const {
+        static std::source_location frame_info = std::source_location::current();
+        return frame_info;
+    }
 };
 
 ASYNCIO_NS_END

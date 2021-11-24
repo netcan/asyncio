@@ -65,8 +65,7 @@ struct Task: private NonCopyable {
     }
 
     struct promise_type: Handle, Result<R> {
-        promise_type(std::source_location loc = std::source_location::current()):
-        frame_info_(loc) { }
+        promise_type() = default;
 
         template<typename... Args> // from free function
         promise_type(NoWaitAtInitialSuspend, Args&&...): wait_at_initial_suspend_{false} { }
@@ -99,25 +98,35 @@ struct Task: private NonCopyable {
         Task get_return_object() noexcept {
             return Task{coro_handle::from_promise(*this)};
         }
+        template<concepts::Awaitable A>
+        decltype(auto) await_transform(A&& awaiter, // for save source_location info
+                                       std::source_location loc = std::source_location::current()) {
+            frame_info_ = loc;
+            return std::forward<A>(awaiter);
+        }
 
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        void run() override {
+        void run() final {
             assert(state_ == PromiseState::PENDING);
             auto handle = coro_handle::from_promise(*this);
             // set to unschedule in advance, because 'resume' may change state
             state_ = PromiseState::UNSCHEDULED;
             handle.resume();
         }
-        void set_state(PromiseState state) override { state_ = state; }
-        const HandleFrameInfo& get_frame_info() override { return frame_info_; }
-        Handle* get_continuation() override { return continuation_; }
+        void set_state(PromiseState state) final { state_ = state; }
+        const std::source_location& get_frame_info() const final { return frame_info_; }
+        void dump_backtrace(size_t depth = 0) const final {
+            fmt::print("[{}] {}\n", depth, frame_name());
+            if (continuation_) { continuation_->dump_backtrace(depth + 1); }
+            else { fmt::print("\n"); }
+        }
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
         // to auto delete by final awaiter
         PromiseState state_ {PromiseState::UNSCHEDULED};
         const bool wait_at_initial_suspend_ {true};
         Handle* continuation_ {};
-        HandleFrameInfo frame_info_{};
+        std::source_location frame_info_{};
     };
 
     bool valid() const { return handle_ != nullptr; }

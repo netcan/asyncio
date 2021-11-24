@@ -12,13 +12,13 @@ template<typename A>
 struct GetAwaiter: std::type_identity<A> { };
 
 template<typename A>
-requires requires(A a) { a.operator co_await(); }
+requires requires(A&& a) { std::forward<A>(a).operator co_await(); }
 struct GetAwaiter<A>: std::type_identity<decltype(std::declval<A>().operator co_await())> { };
 
 template<typename A>
-requires requires(A a) {
-    operator co_await(a);
-    requires ! (requires { a.operator co_await(); });
+requires requires(A&& a) {
+    operator co_await(std::forward<A>(a));
+    requires ! (requires { std::forward<A>(a).operator co_await(); });
 }
 struct GetAwaiter<A>: std::type_identity<decltype(operator co_await(std::declval<A>()))> { };
 

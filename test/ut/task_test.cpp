@@ -4,6 +4,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/catch_approx.hpp>
 #include <asyncio/event_loop.h>
+#include <asyncio/callstack.h>
 #include <asyncio/task.h>
 #include <asyncio/gather.h>
 #include <asyncio/exception.h>
@@ -79,7 +80,7 @@ SCENARIO("test Task await result value") {
     GIVEN("fibonacci") {
         std::function<auto(size_t) -> Task<size_t>> fibo =
             [&](size_t n) -> Task<size_t> {
-                if (n <= 1) co_return n;
+                if (n <= 1) { co_return n; }
                 co_return co_await fibo(n - 1) +
                           co_await fibo(n - 2);
             };

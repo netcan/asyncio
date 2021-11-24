@@ -14,7 +14,7 @@
 ASYNCIO_NS_BEGIN
 namespace detail {
 template<typename R, typename Duration>
-struct WaitForAwaiter {
+struct WaitForAwaiter: NonCopyable {
     constexpr bool await_ready() noexcept { return false; }
     constexpr decltype(auto) await_resume() {
         return result_.result();
@@ -60,15 +60,11 @@ private:
             EventLoop& loop{get_event_loop()};
             loop.call_later(timeout, *this);
         }
-        void run() override { // timeout!
+        void run() final { // timeout!
             EventLoop& loop{get_event_loop()};
             loop.cancel_handle(current_task_);
             awaiter_.result_.set_exception(std::make_exception_ptr(TimeoutError{}));
             loop.call_soon(*awaiter_.continuation_);
-        }
-        const HandleFrameInfo& get_frame_info() override {
-            static HandleFrameInfo frame_info;
-            return frame_info;
         }
 
         WaitForAwaiter& awaiter_;
@@ -79,11 +75,27 @@ private:
 template<concepts::Awaitable Fut, typename Duration>
 WaitForAwaiter(Fut&&, Duration) -> WaitForAwaiter<AwaitResult<Fut>, Duration>;
 
+template<concepts::Awaitable Fut, typename Duration>
+struct WaitForAwaiterRegistry {
+    WaitForAwaiterRegistry(Fut&& fut, Duration duration)
+    : fut_(std::forward<Fut>(fut)), duration_(duration) { }
+
+    auto operator co_await () && {
+        return WaitForAwaiter{std::move(fut_), duration_};
+    }
+private:
+    Fut fut_; // lift Future's lifetime
+    Duration duration_;
+};
+
+template<concepts::Awaitable Fut, typename Duration>
+WaitForAwaiterRegistry(Fut&& fut, Duration duration)
+-> WaitForAwaiterRegistry<Fut, Duration>;
+
 template<concepts::Awaitable Fut, typename Rep, typename Period>
 auto wait_for(NoWaitAtInitialSuspend, Fut&& fut, std::chrono::duration<Rep, Period> timeout)
 -> Task<AwaitResult<Fut>> {
-    Fut future = std::forward<Fut>(fut); // lift fut lifetime
-    co_return co_await WaitForAwaiter { std::forward<Fut>(future), timeout };
+    co_return co_await WaitForAwaiterRegistry { std::forward<Fut>(fut), timeout };
 }
 }
 
