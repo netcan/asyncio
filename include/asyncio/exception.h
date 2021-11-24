@@ -8,9 +8,16 @@
 #include <exception>
 ASYNCIO_NS_BEGIN
 struct TimeoutError: std::exception {
-    const char* what() const noexcept override {
+    [[nodiscard]] const char* what() const noexcept override {
         return "TimeoutError";
     }
 };
+
+struct NoResultError: std::exception {
+    [[nodiscard]] const char* what() const noexcept override {
+        return "result is unset";
+    }
+};
+
 ASYNCIO_NS_END
 #endif // ASYNCIO_EXCEPTION_H
