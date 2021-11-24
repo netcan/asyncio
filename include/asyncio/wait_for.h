@@ -81,27 +81,11 @@ private:
 template<concepts::Awaitable Fut, typename Duration>
 WaitForAwaiter(Fut, Duration) -> WaitForAwaiter<AwaitResult<Fut>, Duration>;
 
-template<concepts::Awaitable Fut, typename Duration>
-struct WaitForAwaiterRegistry {
-    WaitForAwaiterRegistry(Fut&& fut, Duration duration)
-    : fut_(std::forward<Fut>(fut)), duration_(duration) { }
-
-    auto operator co_await () && {
-        return WaitForAwaiter{std::move(fut_), duration_};
-    }
-private:
-    Fut fut_; // lift Future's lifetime
-    Duration duration_;
-};
-
-template<concepts::Awaitable Fut, typename Duration>
-WaitForAwaiterRegistry(Fut&& fut, Duration duration)
--> WaitForAwaiterRegistry<Fut, Duration>;
-
 template<concepts::Awaitable Fut, typename Rep, typename Period>
 auto wait_for(NoWaitAtInitialSuspend, Fut&& fut, std::chrono::duration<Rep, Period> timeout)
 -> Task<AwaitResult<Fut>> {
-    co_return co_await WaitForAwaiterRegistry { std::forward<Fut>(fut), timeout };
+    Fut future = std::forward<Fut>(fut); // lift fut lifetime
+    co_return co_await WaitForAwaiter { std::forward<Fut>(future), timeout };
 }
 }
 

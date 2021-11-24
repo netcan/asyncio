@@ -186,8 +186,8 @@ SCENARIO("test gather") {
                 REQUIRE(c == 24);
             }
             REQUIRE((co_await fac_lvalue) == 2);
-            REQUIRE(! fac_xvalue.valid());
-            REQUIRE(! fac_rvalue.valid());
+            REQUIRE(! fac_xvalue.valid()); // be moved
+            REQUIRE(! fac_rvalue.valid()); // be moved
             is_called = true;
         }());
         REQUIRE(is_called);
@@ -262,8 +262,9 @@ SCENARIO("test timeout") {
 
     SECTION("wait_for with sleep") {
         REQUIRE(! is_called);
+        auto wait_for_rvalue = wait_for(sleep(30ms), 50ms);
         loop.run_until_complete([&]() -> Task<> {
-            REQUIRE_NOTHROW(co_await wait_for(sleep(30ms), 50ms));
+            REQUIRE_NOTHROW(co_await std::move(wait_for_rvalue));
             REQUIRE_THROWS_AS(co_await wait_for(sleep(50ms), 30ms), TimeoutError);
             is_called = true;
         }());
