@@ -8,7 +8,7 @@
 using namespace ASYNCIO_NS;
 
 SCENARIO("test Counted") {
-    using TestCounted = Counted<default_count_policy>;
+    using TestCounted = Counted<default_counted_policy>;
     TestCounted::reset_count();
     GIVEN("move counted") {
         {
@@ -76,7 +76,7 @@ SCENARIO("test result T") {
             res.set_value(std::move(c));
             REQUIRE(TestCounted::construct_counts() == 2);
             REQUIRE(TestCounted::move_construct_counts == 1);
-
+        }
         REQUIRE(TestCounted::alive_counts() == 1);
         REQUIRE(res.has_value());
     }

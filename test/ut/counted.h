@@ -11,9 +11,9 @@ struct CountedPolicy {
     bool copy_assignable = true;
 };
 
-inline constexpr CountedPolicy default_count_policy;
+inline constexpr CountedPolicy default_counted_policy;
 
-template<CountedPolicy policy = default_count_policy>
+template<CountedPolicy policy = default_counted_policy>
 struct Counted {
     static void reset_count() {
         move_construct_counts = 0;
