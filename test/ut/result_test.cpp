@@ -51,7 +51,7 @@ SCENARIO("test result T") {
         .copy_assignable=false
     }>;
     TestCounted::reset_count();
-    GIVEN("lvalue result") {
+    GIVEN("result set lvalue") {
         Result<TestCounted> res;
         REQUIRE(! res.has_value());
         {
@@ -66,7 +66,7 @@ SCENARIO("test result T") {
         REQUIRE(res.has_value());
     }
 
-    GIVEN("rvalue result") {
+    GIVEN("result set rvalue") {
         Result<TestCounted> res;
         REQUIRE(! res.has_value());
         {
@@ -80,5 +80,41 @@ SCENARIO("test result T") {
         REQUIRE(TestCounted::alive_counts() == 1);
         REQUIRE(res.has_value());
     }
+
+    GIVEN("lvalue result") {
+        Result<TestCounted> res;
+        res.set_value(TestCounted{});
+        REQUIRE(res.has_value());
+        REQUIRE(TestCounted::default_construct_counts == 1);
+        REQUIRE(TestCounted::move_construct_counts == 1);
+        {
+            {
+                auto&& r = res.result();
+                REQUIRE(TestCounted::default_construct_counts == 1);
+                REQUIRE(TestCounted::move_construct_counts == 1);
+            }
+            {
+                auto r = res.result();
+                REQUIRE(TestCounted::default_construct_counts == 1);
+                REQUIRE(TestCounted::copy_construct_counts == 1);
+            }
+        }
+        REQUIRE(TestCounted::alive_counts() == 1);
+    }
+
+    GIVEN("rvalue result") {
+        Result<TestCounted> res;
+        res.set_value(TestCounted{});
+        REQUIRE(res.has_value());
+        REQUIRE(TestCounted::default_construct_counts == 1);
+        REQUIRE(TestCounted::move_construct_counts == 1);
+        {
+            auto r = std::move(res).result();
+            REQUIRE(TestCounted::move_construct_counts == 2);
+            REQUIRE(TestCounted::alive_counts() == 2);
+        }
+        REQUIRE(TestCounted::alive_counts() == 1);
+    }
+
 
 }

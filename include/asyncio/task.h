@@ -6,6 +6,7 @@
 #define ASYNCIO_TASK_H
 #include <asyncio/handle.h>
 #include <asyncio/event_loop.h>
+#include <asyncio/result.h>
 #include <coroutine>
 #include <cassert>
 #include <variant>
@@ -63,44 +64,7 @@ struct Task: private NonCopyable {
         return Awaiter {handle_};
     }
 
-    struct promise_result {
-        template<class U>
-        void return_value(U &&result) noexcept {
-            result_ = R(std::forward<U>(result));
-        }
-        void unhandled_exception() noexcept {
-            result_ = std::current_exception();
-        }
-        R& result() {
-            if (auto exception = std::get_if<std::exception_ptr>(&result_)) {
-                std::rethrow_exception(*exception);
-            }
-            if (auto res = std::get_if<R>(&result_)) {
-                return *res;
-            }
-            throw std::runtime_error("result is unset");
-        }
-    private:
-        std::variant<std::monostate, R, std::exception_ptr> result_;
-    };
-
-    struct promise_void_result {
-        constexpr void return_void() noexcept {}
-        void unhandled_exception() noexcept {
-            result_ = std::current_exception();
-        }
-        constexpr void result() {
-            if (result_) { std::rethrow_exception(result_); }
-        }
-    private:
-        std::exception_ptr result_;
-    };
-
-    using PromiseResult = std::conditional_t<std::is_void_v<R>
-            , promise_void_result
-            , promise_result>;
-
-    struct promise_type: Handle, PromiseResult {
+    struct promise_type: Handle, Result<R> {
         promise_type() = default;
         template<typename... Args> // from free function
         promise_type(NoWaitAtInitialSuspend, Args&&...): wait_at_initial_suspend_{false} { }

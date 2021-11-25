@@ -9,22 +9,15 @@
 #include <asyncio/concept/awaitable.h>
 #include <asyncio/event_loop.h>
 #include <asyncio/exception.h>
-#include <asyncio/void_value.h>
+#include <asyncio/result.h>
 #include <chrono>
 ASYNCIO_NS_BEGIN
 namespace detail {
 template<typename R, typename Duration>
 struct WaitForAwaiter {
     constexpr bool await_ready() noexcept { return false; }
-    constexpr R await_resume() const {
-        if (auto exception = std::get_if<std::exception_ptr>(&result_)) {
-            std::rethrow_exception(*exception);
-        }
-
-        if constexpr (! std::is_void_v<R>) {
-            if (auto res = std::get_if<R>(&result_)) { return *res; }
-            throw std::runtime_error("result is unset");
-        }
+    constexpr decltype(auto) await_resume() {
+        return result_.result();
     }
 
     template<typename Promise>
@@ -36,7 +29,8 @@ struct WaitForAwaiter {
 
     template<concepts::Awaitable Fut>
     WaitForAwaiter(Fut&& fut, Duration timeout)
-            : wait_for_task_(wait_for_task(no_wait_at_initial_suspend, std::forward<Fut>(fut)))
+            : wait_for_task_(wait_for_task(no_wait_at_initial_suspend,
+                                           std::forward<Fut>(fut)))
             , timeout_handle_(*this, timeout, fut.get_resumable())
             { }
 
@@ -45,9 +39,9 @@ private:
     Task<> wait_for_task(NoWaitAtInitialSuspend, Fut&& fut) {
         try {
             if constexpr (std::is_void_v<R>) { co_await std::forward<Fut>(fut); }
-            else { result_ = std::move(co_await std::forward<Fut>(fut)); }
+            else { result_.set_value(co_await std::forward<Fut>(fut)); }
         } catch(...) {
-            result_ = std::current_exception();
+            result_.unhandled_exception();
         }
         EventLoop& loop{get_event_loop()};
         loop.cancel_handle(timeout_handle_);
@@ -55,7 +49,7 @@ private:
     }
 
 private:
-    std::variant<std::monostate, GetTypeIfVoid_t<R>, std::exception_ptr> result_;
+    Result<R> result_;
     Task<> wait_for_task_;
     Handle* continuation_{};
 
@@ -69,7 +63,7 @@ private:
         void run() override { // timeout!
             EventLoop& loop{get_event_loop()};
             loop.cancel_handle(current_task_);
-            awaiter_.result_ = std::make_exception_ptr(TimeoutError{});
+            awaiter_.result_.set_exception(std::make_exception_ptr(TimeoutError{}));
             loop.call_soon(*awaiter_.continuation_);
         }
 
@@ -79,7 +73,7 @@ private:
 };
 
 template<concepts::Awaitable Fut, typename Duration>
-WaitForAwaiter(Fut, Duration) -> WaitForAwaiter<AwaitResult<Fut>, Duration>;
+WaitForAwaiter(Fut&&, Duration) -> WaitForAwaiter<AwaitResult<Fut>, Duration>;
 
 template<concepts::Awaitable Fut, typename Rep, typename Period>
 auto wait_for(NoWaitAtInitialSuspend, Fut&& fut, std::chrono::duration<Rep, Period> timeout)
