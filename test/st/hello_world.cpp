@@ -9,11 +9,13 @@
 #include <asyncio/runner.h>
 #include <asyncio/sleep.h>
 #include <asyncio/schedule_task.h>
+#include <asyncio/callstack.h>
 using namespace ASYNCIO_NS;
 
 Task<std::string_view> hello() {
     fmt::print("enter {}...\n", __FUNCTION__ );
     co_await asyncio::sleep(1s);
+    co_await dump_callstack();
     fmt::print("exit {}...\n", __FUNCTION__ );
     co_return "hello";
 }

@@ -65,7 +65,9 @@ struct Task: private NonCopyable {
     }
 
     struct promise_type: Handle, Result<R> {
-        promise_type() = default;
+        promise_type(std::source_location loc = std::source_location::current()):
+        frame_info_(loc) { }
+
         template<typename... Args> // from free function
         promise_type(NoWaitAtInitialSuspend, Args&&...): wait_at_initial_suspend_{false} { }
         template<typename Obj, typename... Args> // from member function
@@ -107,12 +109,15 @@ struct Task: private NonCopyable {
             handle.resume();
         }
         void set_state(PromiseState state) override { state_ = state; }
+        const HandleFrameInfo& get_frame_info() override { return frame_info_; }
+        Handle* get_continuation() override { return continuation_; }
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
         // to auto delete by final awaiter
         PromiseState state_ {PromiseState::UNSCHEDULED};
         const bool wait_at_initial_suspend_ {true};
         Handle* continuation_ {};
+        HandleFrameInfo frame_info_{};
     };
 
     bool valid() const { return handle_ != nullptr; }

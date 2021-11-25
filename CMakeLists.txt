@@ -31,7 +31,7 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 
 add_library(asyncio STATIC
         ${ASYNC_INC}
-        src/event_loop.cpp include/asyncio/result.h)
+        src/event_loop.cpp include/asyncio/result.h include/asyncio/callstack.h)
 
 add_subdirectory(test)
 add_subdirectory(third_party)

@@ -66,6 +66,10 @@ private:
             awaiter_.result_.set_exception(std::make_exception_ptr(TimeoutError{}));
             loop.call_soon(*awaiter_.continuation_);
         }
+        const HandleFrameInfo& get_frame_info() override {
+            static HandleFrameInfo frame_info;
+            return frame_info;
+        }
 
         WaitForAwaiter& awaiter_;
         Handle& current_task_;
