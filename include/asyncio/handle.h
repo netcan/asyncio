@@ -27,7 +27,7 @@ struct Handle {
     virtual ~Handle() = default;
 private:
     virtual const std::source_location& get_frame_info() const {
-        static std::source_location frame_info = std::source_location::current();
+        static const std::source_location frame_info = std::source_location::current();
         return frame_info;
     }
 };
