@@ -55,7 +55,7 @@ public:
     }
 
     template<concepts::Future Fut>
-    auto run_until_complete(Fut&& future) {
+    decltype(auto) run_until_complete(Fut&& future) {
         call_soon(future.get_resumable());
         run_forever();
         return future.get_result();

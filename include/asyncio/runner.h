@@ -9,8 +9,8 @@
 
 ASYNCIO_NS_BEGIN
 template<concepts::Future Fut>
-auto run(Fut&& main) {
-    decltype(auto) loop = get_event_loop();
+decltype(auto) run(Fut&& main) {
+    auto& loop = get_event_loop();
     return loop.run_until_complete(std::forward<Fut>(main));
 }
 
