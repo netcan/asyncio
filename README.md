@@ -19,6 +19,37 @@ hello
 world
 ```
 
+## Dump callstack
+```cpp
+Task<int> factorial(int n) {
+    if (n <= 1) {
+        co_await dump_callstack();
+        co_return 1;
+    }
+    co_return (co_await factorial(n - 1)) * n;
+}
+
+int main() {
+    fmt::print("run result: {}\n", asyncio::run(factorial(10)));
+    return 0;
+}
+```
+output:
+```shell
+[0] void factorial(factorial(int)::_Z9factoriali.Frame*) at /project/asyncio/test/st/hello_world.cpp:17
+[1] void factorial(factorial(int)::_Z9factoriali.Frame*) at /project/asyncio/test/st/hello_world.cpp:20
+[2] void factorial(factorial(int)::_Z9factoriali.Frame*) at /project/asyncio/test/st/hello_world.cpp:20
+[3] void factorial(factorial(int)::_Z9factoriali.Frame*) at /project/asyncio/test/st/hello_world.cpp:20
+[4] void factorial(factorial(int)::_Z9factoriali.Frame*) at /project/asyncio/test/st/hello_world.cpp:20
+[5] void factorial(factorial(int)::_Z9factoriali.Frame*) at /project/asyncio/test/st/hello_world.cpp:20
+[6] void factorial(factorial(int)::_Z9factoriali.Frame*) at /project/asyncio/test/st/hello_world.cpp:20
+[7] void factorial(factorial(int)::_Z9factoriali.Frame*) at /project/asyncio/test/st/hello_world.cpp:20
+[8] void factorial(factorial(int)::_Z9factoriali.Frame*) at /project/asyncio/test/st/hello_world.cpp:20
+[9] void factorial(factorial(int)::_Z9factoriali.Frame*) at /project/asyncio/test/st/hello_world.cpp:20
+
+run result: 3628800
+```
+
 ## Gather
 ```cpp
 auto factorial(std::string_view name, int number) -> Task<int> {
