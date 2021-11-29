@@ -11,6 +11,7 @@ ASYNCIO_NS_BEGIN
 struct Event {
     int fd;
     uint32_t events;
+    void* data {nullptr};
 };
 ASYNCIO_NS_END
 

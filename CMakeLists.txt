@@ -33,7 +33,7 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 
 add_library(asyncio STATIC
         ${ASYNC_INC}
-        src/event_loop.cpp)
+        src/event_loop.cpp include/asyncio/open_connection.h)
 target_link_libraries(asyncio PUBLIC fmt::fmt)
 
 add_subdirectory(test)

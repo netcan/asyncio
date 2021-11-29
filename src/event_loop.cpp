@@ -2,6 +2,7 @@
 // Created by netcan on 2021/09/07.
 //
 #include <chrono>
+#include <optional>
 #include <asyncio/event_loop.h>
 
 namespace ranges = std::ranges;
@@ -19,7 +20,7 @@ void EventLoop::run_forever() {
 }
 
 void EventLoop::run_once() {
-    MSDuration timeout{0};
+    std::optional<MSDuration> timeout;
     // Remove delayed calls that were cancelled from head of queue.
     while (! schedule_.empty()) {
         auto&& [when, handle] = schedule_[0];
@@ -32,13 +33,18 @@ void EventLoop::run_once() {
         }
     }
 
-    if (ready_.empty() && ! schedule_.empty()) {
+    if (! ready_.empty()) {
+        timeout.emplace(0);
+    } else if (! schedule_.empty()) {
         auto&& [when, _] = schedule_[0];
         timeout = std::max(when - time(), MSDuration(0));
     }
 
-    auto event_lists = selector_.select(timeout.count());
-    // TODO: handle event_lists
+    auto event_lists = selector_.select(timeout.has_value() ? timeout->count() : -1);
+    for (auto&& event: event_lists) {
+        Handle* continuation_ = reinterpret_cast<Handle*>(event.data);
+        ready_.emplace(continuation_);
+    }
 
     auto end_time = time();
     while (! schedule_.empty()) {

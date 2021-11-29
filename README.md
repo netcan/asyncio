@@ -100,9 +100,10 @@ Task C: factorial(4) = 24
 - gcc-12
 
 ## TODO
-- implement result type for code reuse, `variant<monostate, value, exception>`
-- implement coroutine backtrace(dump continuation chain)
-- implement some io coroutine(socket/read/write/close)
+- [x] implement result type for code reuse, `variant<monostate, value, exception>`
+- [x] implement coroutine backtrace(dump continuation chain)
+- [ ] implement some io coroutine(socket/read/write/close)
+- [ ] using libuv as backend
 
 ## Reference
 - https://github.com/lewissbaker/cppcoro

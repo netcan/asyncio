@@ -42,11 +42,8 @@ struct Task: private NonCopyable {
         return handle_.promise().result();
     }
 
-    struct Awaiter {
+    struct AwaiterBase {
         constexpr bool await_ready() { return self_coro_.done(); }
-        R await_resume() const {
-            return self_coro_.promise().result();
-        }
         template<typename Promise>
         void await_suspend(std::coroutine_handle<Promise> resumer) const noexcept {
             assert(! self_coro_.promise().continuation_);
@@ -60,7 +57,21 @@ struct Task: private NonCopyable {
         }
         coro_handle self_coro_ {};
     };
-    auto operator co_await() const noexcept {
+    auto operator co_await() const & noexcept {
+        struct Awaiter: AwaiterBase {
+            decltype(auto) await_resume() const {
+                return AwaiterBase::self_coro_.promise().result();
+            }
+        };
+        return Awaiter {handle_};
+    }
+
+    auto operator co_await() const && noexcept {
+        struct Awaiter: AwaiterBase {
+            decltype(auto) await_resume() const {
+                return std::move(AwaiterBase::self_coro_.promise()).result();
+            }
+        };
         return Awaiter {handle_};
     }
 

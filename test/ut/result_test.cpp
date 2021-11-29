@@ -87,16 +87,18 @@ SCENARIO("test result T") {
         REQUIRE(res.has_value());
         REQUIRE(TestCounted::default_construct_counts == 1);
         REQUIRE(TestCounted::move_construct_counts == 1);
+        REQUIRE(TestCounted::copy_construct_counts == 0);
         {
             {
                 auto&& r = res.result();
                 REQUIRE(TestCounted::default_construct_counts == 1);
                 REQUIRE(TestCounted::move_construct_counts == 1);
+                REQUIRE(TestCounted::copy_construct_counts == 1);
             }
             {
                 auto r = res.result();
                 REQUIRE(TestCounted::default_construct_counts == 1);
-                REQUIRE(TestCounted::copy_construct_counts == 1);
+                REQUIRE(TestCounted::copy_construct_counts == 2);
             }
         }
         REQUIRE(TestCounted::alive_counts() == 1);

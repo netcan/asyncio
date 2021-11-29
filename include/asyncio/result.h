@@ -25,7 +25,7 @@ struct Result {
         return set_value(std::forward<R>(value));
     }
 
-    constexpr T& result() & {
+    constexpr T result() & {
         if (auto exception = std::get_if<std::exception_ptr>(&result_)) {
             std::rethrow_exception(*exception);
         }
@@ -34,7 +34,7 @@ struct Result {
         }
         throw NoResultError{};
     }
-    constexpr T&& result() && {
+    constexpr T result() && {
         if (auto exception = std::get_if<std::exception_ptr>(&result_)) {
             std::rethrow_exception(*exception);
         }

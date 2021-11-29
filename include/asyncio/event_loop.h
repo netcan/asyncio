@@ -30,7 +30,7 @@ public:
     }
 
     bool is_stop() {
-        return schedule_.empty() && ready_.empty();
+        return schedule_.empty() && ready_.empty() && selector_.is_stop();
     }
 
     template<typename Rep, typename Period>
@@ -59,6 +59,28 @@ public:
         call_soon(future.get_resumable());
         run_forever();
         return future.get_result();
+    }
+
+    struct WaitEventAwaiter {
+        constexpr bool await_ready() const noexcept { return false; }
+        template<typename Promise>
+        constexpr void await_suspend(std::coroutine_handle<Promise> handle) noexcept {
+            auto& promise = handle.promise();
+            promise.set_state(PromiseState::PENDING);
+            event_.data = static_cast<Handle*>(&promise);
+            selector_.register_event(event_);
+        }
+        void await_resume() noexcept {
+            selector_.remove_event(event_);
+        }
+
+        Selector& selector_;
+        Event event_;
+    };
+
+    [[nodiscard]]
+    auto wait_event(const Event& event) {
+        return WaitEventAwaiter(selector_, event);
     }
 
     void run_forever();
