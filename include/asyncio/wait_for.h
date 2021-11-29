@@ -15,7 +15,7 @@ ASYNCIO_NS_BEGIN
 namespace detail {
 template<typename R, typename Duration>
 struct WaitForAwaiter: NonCopyable {
-    constexpr bool await_ready() noexcept { return false; }
+    constexpr bool await_ready() noexcept { return result_.has_value(); }
     constexpr decltype(auto) await_resume() {
         return result_.result();
     }

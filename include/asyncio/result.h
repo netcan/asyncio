@@ -13,7 +13,7 @@ ASYNCIO_NS_BEGIN
 template<typename T>
 struct Result {
     constexpr bool has_value() const noexcept {
-        return std::get_if<T>(&result_) != nullptr;
+        return std::get_if<std::monostate>(&result_) == nullptr;
     }
     template<typename R>
     constexpr void set_value(R&& value) noexcept {
@@ -53,19 +53,21 @@ private:
 
 template<>
 struct Result<void> {
-    bool has_value() const noexcept {
-        return result_ != nullptr;
+    constexpr bool has_value() const noexcept {
+        return result_.has_value();
     }
-    constexpr void return_void() noexcept { }
+    constexpr void return_void() noexcept {
+        result_.emplace(nullptr);
+    }
     void result() {
-        if (result_) { std::rethrow_exception(result_); }
+        if (result_.has_value() && *result_ != nullptr) { std::rethrow_exception(*result_); }
     }
 
     void set_exception(std::exception_ptr exception) noexcept { result_ = exception; }
     void unhandled_exception() noexcept { result_ = std::current_exception(); }
 
 private:
-    std::exception_ptr result_;
+    std::optional<std::exception_ptr> result_;
 };
 
 ASYNCIO_NS_END
