@@ -1,6 +1,16 @@
 # asyncio
 Asyncio is a C++20 coroutine library to write concurrent code using the await syntax, and imitate python asyncio library.
 
+## Build & Run
+```shell
+$ git clone --recursive https://github.com/netcan/asyncio.git
+$ cd asyncio
+$ mkdir build
+$ cd build
+$ cmake ..
+$ make -j
+```
+
 ## Hello world
 ```cpp
 Task<> hello_world() {
