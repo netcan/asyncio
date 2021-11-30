@@ -6,6 +6,7 @@
 #define ASYNCIO_OPEN_CONNECTION_H
 #include <asyncio/asyncio_ns.h>
 #include <asyncio/stream.h>
+#include <asyncio/addrinfo_guard.h>
 #include <asyncio/selector/event.h>
 #include <exception>
 #include <asyncio/task.h>
@@ -13,7 +14,6 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <system_error>
-#include <netdb.h>
 
 ASYNCIO_NS_BEGIN
 namespace detail {
@@ -36,19 +36,10 @@ Task<bool> connect(int fd, const sockaddr *addr, socklen_t len) noexcept {
     co_return result == 0;
 }
 
-struct AddrInfoRAII {
-    AddrInfoRAII(addrinfo* info): info_(info) { }
-    ~AddrInfoRAII() { freeaddrinfo(info_); }
-private:
-    addrinfo* info_{nullptr};
-};
 }
 
 Task<Stream> open_connection(std::string_view ip, uint16_t port) {
-    addrinfo hints {
-        .ai_family = AF_UNSPEC,
-        .ai_socktype = SOCK_STREAM,
-    };
+    addrinfo hints { .ai_family = AF_UNSPEC, .ai_socktype = SOCK_STREAM };
     addrinfo *server_info {nullptr};
     auto service = std::to_string(port);
     // TODO: getaddrinfo is a blocking api
@@ -56,17 +47,18 @@ Task<Stream> open_connection(std::string_view ip, uint16_t port) {
             rv != 0) {
         throw std::system_error(std::make_error_code(std::errc::address_not_available));
     }
-    detail::AddrInfoRAII _i(server_info);
+    AddrInfoGuard _i(server_info);
 
     int sockfd = -1;
     for (auto p = server_info; p != nullptr; p = p->ai_next) {
-        sockfd = -1;
         if ( (sockfd = socket(p->ai_family, p->ai_socktype | SOCK_NONBLOCK, p->ai_protocol)) == -1) {
             continue;
         }
-        if (co_await detail::connect(sockfd, p->ai_addr, p->ai_addrlen) ) {
+        if (co_await detail::connect(sockfd, p->ai_addr, p->ai_addrlen)) {
             break;
         }
+        close(sockfd);
+        sockfd = -1;
     }
     if (sockfd == -1) {
         throw std::system_error(std::make_error_code(std::errc::address_not_available));

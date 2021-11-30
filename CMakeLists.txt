@@ -30,6 +30,8 @@ set(ASYNCIO_INC
         include/asyncio/callstack.h
         include/asyncio/open_connection.h
         include/asyncio/stream.h
+        include/asyncio/start_server.h
+        include/asyncio/addrinfo_guard.h
         )
 
 include_directories(${CMAKE_SOURCE_DIR}/include)

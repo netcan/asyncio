@@ -141,6 +141,7 @@ struct Task: private NonCopyable {
     };
 
     bool valid() const { return handle_ != nullptr; }
+    bool done() const { return handle_.done(); }
     explicit Task(coro_handle h) noexcept: handle_(h) {}
 private:
     coro_handle handle_;

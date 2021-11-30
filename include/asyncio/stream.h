@@ -7,6 +7,7 @@
 #include <asyncio/asyncio_ns.h>
 #include <asyncio/noncopyable.h>
 #include <asyncio/task.h>
+#include <netdb.h>
 #include <utility>
 #include <vector>
 #include <unistd.h>
@@ -14,8 +15,15 @@
 ASYNCIO_NS_BEGIN
 struct Stream: NonCopyable {
     using Buffer = std::vector<char>;
-    Stream(int fd): fd_(fd) {}
-    Stream(Stream&& other): fd_{std::exchange(other.fd_, -1) } {}
+    Stream(int fd): fd_(fd) {
+        if (fd_ > 0) {
+            socklen_t addrlen = sizeof(sock_info_);
+            getsockname(fd_, reinterpret_cast<sockaddr*>(&sock_info_), &addrlen);
+        }
+    }
+    Stream(int fd, const sockaddr_storage& sockinfo): fd_(fd), sock_info_(sockinfo) { }
+    Stream(Stream&& other): fd_{std::exchange(other.fd_, -1) },
+                            sock_info_(other.sock_info_) { }
     ~Stream() { close(); }
 
     void close() {
@@ -51,6 +59,9 @@ struct Stream: NonCopyable {
             total_write += sz;
         }
     }
+    const sockaddr_storage& get_sock_info() const {
+        return sock_info_;
+    }
 
 private:
     Task<Buffer> read_until_eof() {
@@ -74,7 +85,25 @@ private:
     }
 private:
     int fd_{-1};
+    sockaddr_storage sock_info_{};
     constexpr static size_t chunk_size = 4096;
 };
+
+
+inline const void *get_in_addr(const sockaddr *sa) {
+    if (sa->sa_family == AF_INET) {
+        return &reinterpret_cast<const sockaddr_in*>(sa)->sin_addr;
+    }
+    return &reinterpret_cast<const sockaddr_in6*>(sa)->sin6_addr;
+}
+
+uint16_t get_in_port(const sockaddr *sa) {
+    if (sa->sa_family == AF_INET) {
+        return ntohs(reinterpret_cast<const sockaddr_in*>(sa)->sin_port);
+    }
+
+    return ntohs(reinterpret_cast<const sockaddr_in6*>(sa)->sin6_port);
+}
+
 ASYNCIO_NS_END
 #endif // ASYNCIO_STREAM_H
