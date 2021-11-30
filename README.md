@@ -50,6 +50,77 @@ output:
 run result: 3628800
 ```
 
+## TCP Echo
+### Client
+```cpp
+Task<> tcp_echo_client(std::string_view message) {
+    auto stream = co_await asyncio::open_connection("127.0.0.1", 8888);
+
+    fmt::print("Send: '{}'\n", message);
+    co_await stream.write(Stream::Buffer(message.begin(), message.end()));
+
+    auto data = co_await stream.read(100);
+    fmt::print("Received: '{}'\n", data.data());
+
+    fmt::print("Close the connection\n");
+    stream.close(); // unneeded, just imitate python
+}
+
+int main(int argc, char** argv) {
+    asyncio::run(tcp_echo_client("hello world!"));
+    return 0;
+}
+```
+
+output:
+```shell
+Send: 'hello world!'
+Received: 'hello world!'
+Close the connection
+```
+
+### Server
+```cpp
+Task<> handle_echo(Stream stream) {
+    auto& sockinfo = stream.get_sock_info();
+    auto sa = reinterpret_cast<const sockaddr*>(&sockinfo);
+    char addr[INET6_ADDRSTRLEN] {};
+
+    auto data = co_await stream.read(100);
+    fmt::print("Received: '{}' from '{}:{}'\n", data.data(),
+               inet_ntop(sockinfo.ss_family, get_in_addr(sa), addr, sizeof addr),
+               get_in_port(sa));
+
+    fmt::print("Send: '{}'\n", data.data());
+    co_await stream.write(data);
+
+    fmt::print("Close the connection\n");
+    stream.close(); // unneeded, just imitate python
+}
+
+Task<void> amain() {
+    auto server = co_await asyncio::start_server(
+            handle_echo, "127.0.0.1", 8888);
+
+    fmt::print("Serving on 127.0.0.1:8888\n");
+
+    co_await server.serve_forever();
+}
+
+int main() {
+    asyncio::run(amain());
+    return 0;
+}
+```
+
+output:
+```shell
+Serving on 127.0.0.1:8888
+Received: 'Hello World!' from '127.0.0.1:49588'
+Send: 'Hello World!'
+Close the connection
+```
+
 ## Gather
 ```cpp
 auto factorial(std::string_view name, int number) -> Task<int> {
@@ -97,12 +168,12 @@ Task C: factorial(4) = 24
 ```
 
 ## Tested Compiler
-- gcc-12
+- Debian Linux gcc-11/12, gcc-11 crash at Release mode
 
 ## TODO
 - [x] implement result type for code reuse, `variant<monostate, value, exception>`
 - [x] implement coroutine backtrace(dump continuation chain)
-- [ ] implement some io coroutine(socket/read/write/close)
+- [x] implement some io coroutine(socket/read/write/close)
 - [ ] using libuv as backend
 
 ## Reference

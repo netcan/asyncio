@@ -11,7 +11,7 @@ using asyncio::Stream;
 using asyncio::get_in_addr;
 using asyncio::get_in_port;
 
-Task<void> handle_echo(Stream stream) {
+Task<> handle_echo(Stream stream) {
     auto& sockinfo = stream.get_sock_info();
     auto sa = reinterpret_cast<const sockaddr*>(&sockinfo);
     char addr[INET6_ADDRSTRLEN] {};

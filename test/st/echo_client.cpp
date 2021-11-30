@@ -6,7 +6,7 @@
 using asyncio::Task;
 using asyncio::Stream;
 
-Task<void> tcp_echo_client(std::string_view message) {
+Task<> tcp_echo_client(std::string_view message) {
     auto stream = co_await asyncio::open_connection("127.0.0.1", 8888);
 
     fmt::print("Send: '{}'\n", message);
