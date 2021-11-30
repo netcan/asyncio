@@ -32,9 +32,7 @@ struct EpollSelector {
         return result;
     }
     ~EpollSelector() {
-        if (epfd_ > 0) {
-            close(epfd_);
-        }
+        if (epfd_ > 0) { close(epfd_); }
     }
     bool is_stop() { return register_event_count_ == 1; }
     void register_event(const Event& event) {

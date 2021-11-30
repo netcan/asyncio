@@ -5,25 +5,17 @@
 #ifndef ASYNCIO_OPEN_CONNECTION_H
 #define ASYNCIO_OPEN_CONNECTION_H
 #include <asyncio/asyncio_ns.h>
+#include <asyncio/stream.h>
 #include <asyncio/selector/event.h>
 #include <exception>
 #include <asyncio/task.h>
 #include <fcntl.h>
-#include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <system_error>
 #include <netdb.h>
 
 ASYNCIO_NS_BEGIN
-struct Stream: NonCopyable {
-    Stream(int fd): fd_(fd) {}
-    Stream(Stream&& other): fd_{std::exchange(other.fd_, -1) } {}
-    ~Stream() { if (fd_ > 0) { close(fd_); } }
-private:
-    int fd_{-1};
-};
-
 namespace detail {
 Task<bool> connect(int fd, const sockaddr *addr, socklen_t len) noexcept {
     int rc = ::connect(fd, addr, len);
@@ -73,8 +65,7 @@ Task<Stream> open_connection(std::string_view ip, uint16_t port) {
             continue;
         }
         if (co_await detail::connect(sockfd, p->ai_addr, p->ai_addrlen) ) {
-            close(sockfd);
-            continue;
+            break;
         }
     }
     if (sockfd == -1) {

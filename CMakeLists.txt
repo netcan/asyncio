@@ -27,13 +27,16 @@ set(ASYNCIO_INC
         include/asyncio/concept/awaitable.h
         include/asyncio/gather.h
         include/asyncio/result.h
-        include/asyncio/callstack.h)
+        include/asyncio/callstack.h
+        include/asyncio/open_connection.h
+        include/asyncio/stream.h
+        )
 
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
 add_library(asyncio STATIC
         ${ASYNC_INC}
-        src/event_loop.cpp include/asyncio/open_connection.h)
+        src/event_loop.cpp)
 target_link_libraries(asyncio PUBLIC fmt::fmt)
 
 add_subdirectory(test)
