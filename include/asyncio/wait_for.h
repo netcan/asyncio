@@ -100,7 +100,7 @@ WaitForAwaiterRegistry(Fut&& fut, Duration duration)
 
 template<concepts::Awaitable Fut, typename Rep, typename Period>
 auto wait_for(NoWaitAtInitialSuspend, Fut&& fut, std::chrono::duration<Rep, Period> timeout)
--> Task<AwaitResult<Fut>> {
+-> Task<AwaitResult<Fut>> { // lift awaitable type(WaitForAwaiterRegistry) to coroutine
     co_return co_await WaitForAwaiterRegistry { std::forward<Fut>(fut), timeout };
 }
 }

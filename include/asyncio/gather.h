@@ -100,7 +100,7 @@ GatherAwaiterRepositry(Futs&&...) -> GatherAwaiterRepositry<Futs...>;
 
 template<concepts::Awaitable... Futs>
 auto gather(NoWaitAtInitialSuspend, Futs&&... futs) // need NoWaitAtInitialSuspend to lift futures lifetime early
--> Task<std::tuple<GetTypeIfVoid_t<AwaitResult<Futs>>...>> {
+-> Task<std::tuple<GetTypeIfVoid_t<AwaitResult<Futs>>...>> { // lift awaitable type(GatherAwaiterRepositry) to coroutine
     co_return co_await detail::GatherAwaiterRepositry{ std::forward<Futs>(futs)... };
 }
 }
