@@ -15,7 +15,7 @@ enum class PromiseState: uint8_t {
     PENDING,
 };
 
-struct Handle {
+struct Handle { // type erase for EventLoop
     virtual void run() = 0;
     std::string frame_name() const {
         const auto& frame_info = get_frame_info();

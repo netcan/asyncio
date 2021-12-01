@@ -28,7 +28,13 @@ public:
     void await_suspend(std::coroutine_handle<Promise> continuation) noexcept {
         continuation_ = &continuation.promise();
         // set continuation_ to PENDING, don't schedule anymore, until it resume continuation_
-        continuation_->set_state(PromiseState::PENDING);
+        continuation.promise().set_state(PromiseState::PENDING);
+    }
+
+    ~GatherAwaiter() {
+        if (continuation_) {
+            continuation_->set_state(PromiseState::UNSCHEDULED);
+        }
     }
 
     template<concepts::Awaitable... Futs>
