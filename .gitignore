@@ -3,3 +3,5 @@
 .idea
 *.out
 /*.py
+.cache
+compile_commands.json
