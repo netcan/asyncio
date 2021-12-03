@@ -5,3 +5,5 @@
 /*.py
 .cache
 compile_commands.json
+/*.p
+/*.data

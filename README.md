@@ -1,3 +1,21 @@
+<!--ts-->
+* [asyncio](#asyncio)
+   * [Build &amp; Run](#build--run)
+   * [Hello world](#hello-world)
+   * [Dump callstack](#dump-callstack)
+   * [TCP Echo](#tcp-echo)
+      * [Client](#client)
+      * [Server](#server)
+      * [Benchmark](#benchmark)
+   * [Gather](#gather)
+   * [Tested Compiler](#tested-compiler)
+   * [TODO](#todo)
+   * [Reference](#reference)
+
+<!-- Added by: netcan, at: Fri Dec  3 08:06:48 PM HKT 2021 -->
+
+<!--te-->
+
 # asyncio
 Asyncio is a C++20 coroutine library to write concurrent code using the await syntax, and imitate python asyncio library.
 
@@ -130,6 +148,21 @@ Received: 'Hello World!' from '127.0.0.1:49588'
 Send: 'Hello World!'
 Close the connection
 ```
+
+### Benchmark
+Using the Apache Benchmarking tool, 10000000 requests that each size is 106 byte, 1000 concurrency, enable keepalive, the QPS/RPS result below:
+
+| framework      |  RPS [#/sec] (mean) |
+|----------------|--------------------:|
+| python asyncio |            47393.59 |
+| this project   |       **164457.63** |
+| epoll          |           149478.83 |
+| libevent       |           136996.46 |
+| libuv          |           159937.73 |
+
+
+More detail see: [benchmark.md](docs/benchmark.md)
+
 
 ## Gather
 ```cpp
