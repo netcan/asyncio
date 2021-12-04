@@ -162,35 +162,35 @@ Document Path:          /
 Document Length:        0 bytes
 
 Concurrency Level:      1000
-Time taken for tests:   69.860 seconds
+Time taken for tests:   63.754 seconds
 Complete requests:      10000000
 Failed requests:        0
 Non-2xx responses:      10000000
 Keep-Alive requests:    10000000
 Total transferred:      1060000000 bytes
 HTML transferred:       0 bytes
-Requests per second:    143144.10 [#/sec] (mean)
-Time per request:       6.986 [ms] (mean)
-Time per request:       0.007 [ms] (mean, across all concurrent requests)
-Transfer rate:          14817.65 [Kbytes/sec] received
+Requests per second:    156852.70 [#/sec] (mean)
+Time per request:       6.375 [ms] (mean)
+Time per request:       0.006 [ms] (mean, across all concurrent requests)
+Transfer rate:          16236.71 [Kbytes/sec] received
 
 Connection Times (ms)
               min  mean[+/-sd] median   max
-Connect:        0    0   0.1      0      16
-Processing:     1    7   1.0      7     102
-Waiting:        0    7   1.0      7     102
-Total:          1    7   1.0      7     108
+Connect:        0    0   0.2      0      24
+Processing:     0    6   1.2      6     164
+Waiting:        0    6   1.2      6     164
+Total:          0    6   1.3      6     174
 
 Percentage of the requests served within a certain time (ms)
-  50%      7
-  66%      7
-  75%      7
-  80%      7
-  90%      8
-  95%      8
-  98%      9
-  99%      9
- 100%    108 (longest request)
+  50%      6
+  66%      6
+  75%      6
+  80%      6
+  90%      7
+  95%      7
+  98%      7
+  99%      8
+ 100%    174 (longest request)
 ```
 
 ## C epoll version
@@ -471,7 +471,7 @@ Reference: https://github.com/tokio-rs/tokio
 use tokio::net::TcpListener;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
-#[tokio::main]
+#[tokio::main(worker_threads = 1)]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let listener = TcpListener::bind("127.0.0.1:8888").await?;
 

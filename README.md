@@ -157,7 +157,7 @@ Using the Apache Benchmarking tool, 10000000 requests that each size is 106 byte
 | [python asyncio](docs/benchmark.md#python399-asyncio) |            47393.59 | Python | coroutine |
 | [this project](docs/benchmark.md#this-project)   |       **164457.63** | C++20 | coroutine |
 | [asio](docs/benchmark.md#asio1180-in-coroutine-mode)           |           159322.66 | C++20 | coroutine |
-| [tokio-rs](docs/benchmark.md#tokio-rs-1140)           |        143144.10 | Rust1.59.0-nightly | coroutine |
+| [tokio-rs](docs/benchmark.md#tokio-rs-1140)           |        156852.70 | Rust1.59.0-nightly | coroutine |
 | [epoll](docs/benchmark.md#c-epoll-version)          |           153147.79 | C| eventloop |
 | [libevent](docs/benchmark.md#c-libevent-21so7)       |           136996.46 | C|  callback |
 | [libuv](docs/benchmark.md#c-libuv1420)          |           159937.73 | C|  callback |
