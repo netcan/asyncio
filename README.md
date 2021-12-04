@@ -156,13 +156,13 @@ Using the Apache Benchmarking tool, 10000000 requests that each size is 106 byte
 |----------------|--------------------:|
 | python asyncio |            47393.59 |
 | this project   |       **164457.63** |
-| epoll          |           149478.83 |
+| epoll          |           153147.79 |
 | libevent       |           136996.46 |
 | libuv          |           159937.73 |
 
+The result may be incredible, but it is possible, the magnitude of IO is milliseconds(1e-3 s), while the magnitude of the coroutine is nanoseconds(1e-9 s).
 
 More detail see: [benchmark.md](docs/benchmark.md)
-
 
 ## Gather
 ```cpp

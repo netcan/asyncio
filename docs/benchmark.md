@@ -1,3 +1,6 @@
+<!--ts-->
+<!--te-->
+
 # AsyncIO Eventloop benchmark
 - Date: 2021-12-3
 - CommitId: bc031cc835d8da4549aebc752c3a3bda5f103012
@@ -5,6 +8,7 @@
 - OS: Linux debian 5.15.0-1-amd64 #1 SMP Debian 5.15.3-1 (2021-11-18) x86_64 GNU/Linux
 - CPU: AMD Ryzen 5 2600X Six-Core Processor
 - Compiler: g++-12 (Debian 12-20211117-1) 12.0.0 20211117 (experimental) [master r12-5346-gd3a9082d7ac]
+- Compiler arguments: `-O3 -DNDEBUG`
 
 ## Python3.9.9 asyncio
 ```shell
@@ -98,24 +102,24 @@ Document Path:          /
 Document Length:        0 bytes
 
 Concurrency Level:      1000
-Time taken for tests:   66.899 seconds
+Time taken for tests:   65.296 seconds
 Complete requests:      10000000
 Failed requests:        0
 Non-2xx responses:      10000000
 Keep-Alive requests:    10000000
 Total transferred:      1060000000 bytes
 HTML transferred:       0 bytes
-Requests per second:    149478.83 [#/sec] (mean)
-Time per request:       6.690 [ms] (mean)
+Requests per second:    153147.79 [#/sec] (mean)
+Time per request:       6.530 [ms] (mean)
 Time per request:       0.007 [ms] (mean, across all concurrent requests)
-Transfer rate:          15473.39 [Kbytes/sec] received
+Transfer rate:          15853.19 [Kbytes/sec] received
 
 Connection Times (ms)
               min  mean[+/-sd] median   max
-Connect:        0    0   0.2      0      24
-Processing:     3    7   0.2      7      24
-Waiting:        0    7   0.2      7      11
-Total:          3    7   0.3      7      34
+Connect:        0    0   0.2      0      25
+Processing:     2    7   0.1      7      25
+Waiting:        0    7   0.1      7      13
+Total:          2    7   0.3      7      35
 
 Percentage of the requests served within a certain time (ms)
   50%      7
@@ -125,8 +129,8 @@ Percentage of the requests served within a certain time (ms)
   90%      7
   95%      7
   98%      7
-  99%      8
- 100%     34 (longest request)
+  99%      7
+ 100%     35 (longest request)
 ```
 
 ## C libevent-2.1.so.7
@@ -281,7 +285,7 @@ Reference: [https://github.com/frevib/epoll-echo-server/blob/master/epoll_echo_s
 #include <arpa/inet.h>
 
 #define BACKLOG 512
-#define MAX_EVENTS 128
+#define MAX_EVENTS 2048
 #define MAX_MESSAGE_LEN 2048
 
 void error(char* msg);
