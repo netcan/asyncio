@@ -152,14 +152,15 @@ Close the connection
 ### Benchmark
 Using the Apache Benchmarking tool, 10000000 requests that each size is 106 byte, 1000 concurrency, enable keepalive, the QPS/RPS result below:
 
-| framework      |  RPS [#/sec] (mean) |
-|----------------|--------------------:|
-| python asyncio |            47393.59 |
-| this project   |       **164457.63** |
-| asio           |           159322.66 |
-| epoll          |           153147.79 |
-| libevent       |           136996.46 |
-| libuv          |           159937.73 |
+| framework      |  RPS [#/sec] (mean) | Language |   Pattern |
+|----------------|--------------------:| --------: |----------:|
+| [python asyncio](docs/benchmark.md#python399-asyncio) |            47393.59 | Python | coroutine |
+| [this project](docs/benchmark.md#this-project)   |       **164457.63** | C++20 | coroutine |
+| [asio](docs/benchmark.md#asio1180-in-coroutine-mode)           |           159322.66 | C++20 | coroutine |
+| [tokio-rs](docs/benchmark.md#tokio-rs-1140)           |        143144.10 | Rust1.59.0-nightly | coroutine |
+| [epoll](docs/benchmark.md#c-epoll-version)          |           153147.79 | C| eventloop |
+| [libevent](docs/benchmark.md#c-libevent-21so7)       |           136996.46 | C|  callback |
+| [libuv](docs/benchmark.md#c-libuv1420)          |           159937.73 | C|  callback |
 
 The result may be incredible, but it is possible, the magnitude of IO is milliseconds(1e-3 s), while the magnitude of the coroutine is nanoseconds(1e-9 s).
 

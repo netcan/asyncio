@@ -3,6 +3,7 @@
    * [Python3.9.9 asyncio](#python399-asyncio)
    * [This project](#this-project)
    * [Asio1.18.0 in coroutine mode](#asio1180-in-coroutine-mode)
+   * [Tokio-rs 1.14.0](#tokio-rs-1140)
    * [C epoll version](#c-epoll-version)
    * [C libevent-2.1.so.7](#c-libevent-21so7)
    * [C libuv1.42.0](#c-libuv1420)
@@ -10,11 +11,12 @@
    * [Python version](#python-version)
    * [This project](#this-project-1)
    * [Asio version](#asio-version)
+   * [Tokio-rs version](#tokio-rs-version)
    * [C epoll version](#c-epoll-version-1)
    * [C libevent version](#c-libevent-version)
    * [C libuv version](#c-libuv-version)
 
-<!-- Added by: netcan, at: Sat Dec  4 09:54:55 AM HKT 2021 -->
+<!-- Added by: netcan, at: Sat Dec  4 10:18:29 AM HKT 2021 -->
 
 <!--te-->
 
@@ -148,6 +150,47 @@ Percentage of the requests served within a certain time (ms)
   98%      7
   99%      7
  100%     35 (longest request)
+```
+
+## Tokio-rs 1.14.0
+```shell
+Server Software:
+Server Hostname:        127.0.0.1
+Server Port:            8888
+
+Document Path:          /
+Document Length:        0 bytes
+
+Concurrency Level:      1000
+Time taken for tests:   69.860 seconds
+Complete requests:      10000000
+Failed requests:        0
+Non-2xx responses:      10000000
+Keep-Alive requests:    10000000
+Total transferred:      1060000000 bytes
+HTML transferred:       0 bytes
+Requests per second:    143144.10 [#/sec] (mean)
+Time per request:       6.986 [ms] (mean)
+Time per request:       0.007 [ms] (mean, across all concurrent requests)
+Transfer rate:          14817.65 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    0   0.1      0      16
+Processing:     1    7   1.0      7     102
+Waiting:        0    7   1.0      7     102
+Total:          1    7   1.0      7     108
+
+Percentage of the requests served within a certain time (ms)
+  50%      7
+  66%      7
+  75%      7
+  80%      7
+  90%      8
+  95%      8
+  98%      9
+  99%      9
+ 100%    108 (longest request)
 ```
 
 ## C epoll version
@@ -416,6 +459,48 @@ int main(int argc, char* argv[])
     }
 
     return 0;
+}
+```
+
+## Tokio-rs version
+Reference: https://github.com/tokio-rs/tokio
+
+`cargo run --release`
+
+```rs
+use tokio::net::TcpListener;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let listener = TcpListener::bind("127.0.0.1:8888").await?;
+
+    loop {
+        let (mut socket, _) = listener.accept().await?;
+
+        tokio::spawn(async move {
+            let mut buf = [0; 1024];
+
+            // In a loop, read data from the socket and write the data back.
+            loop {
+                let n = match socket.read(&mut buf).await {
+                    // socket closed
+                    Ok(n) if n == 0 => return,
+                    Ok(n) => n,
+                    Err(e) => {
+                        eprintln!("failed to read from socket; err = {:?}", e);
+                        return;
+                    }
+                };
+
+                // Write the data back
+                if let Err(e) = socket.write_all(&buf[0..n]).await {
+                    eprintln!("failed to write to socket; err = {:?}", e);
+                    return;
+                }
+            }
+        });
+    }
 }
 ```
 
