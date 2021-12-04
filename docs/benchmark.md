@@ -1,7 +1,24 @@
 <!--ts-->
+* [AsyncIO eventloop echo server benchmark](#asyncio-eventloop-echo-server-benchmark)
+   * [Python3.9.9 asyncio](#python399-asyncio)
+   * [This project](#this-project)
+   * [Asio1.18.0 in coroutine mode](#asio1180-in-coroutine-mode)
+   * [C epoll version](#c-epoll-version)
+   * [C libevent-2.1.so.7](#c-libevent-21so7)
+   * [C libuv1.42.0](#c-libuv1420)
+* [Test Code](#test-code)
+   * [Python version](#python-version)
+   * [This project](#this-project-1)
+   * [Asio version](#asio-version)
+   * [C epoll version](#c-epoll-version-1)
+   * [C libevent version](#c-libevent-version)
+   * [C libuv version](#c-libuv-version)
+
+<!-- Added by: netcan, at: Sat Dec  4 09:54:55 AM HKT 2021 -->
+
 <!--te-->
 
-# AsyncIO Eventloop benchmark
+# AsyncIO eventloop echo server benchmark
 - Date: 2021-12-3
 - CommitId: bc031cc835d8da4549aebc752c3a3bda5f103012
 - Test command: `ab -n 10000000 -c 1000 -k http://127.0.0.1:8888/`
@@ -92,8 +109,49 @@ Percentage of the requests served within a certain time (ms)
  100%     33 (longest request)
 ```
 
+## Asio1.18.0 in coroutine mode
+```shell
+Server Software:
+Server Hostname:        127.0.0.1
+Server Port:            8888
+
+Document Path:          /
+Document Length:        0 bytes
+
+Concurrency Level:      1000
+Time taken for tests:   62.766 seconds
+Complete requests:      10000000
+Failed requests:        0
+Non-2xx responses:      10000000
+Keep-Alive requests:    10000000
+Total transferred:      1060000000 bytes
+HTML transferred:       0 bytes
+Requests per second:    159322.66 [#/sec] (mean)
+Time per request:       6.277 [ms] (mean)
+Time per request:       0.006 [ms] (mean, across all concurrent requests)
+Transfer rate:          16492.38 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    0   0.2      0      25
+Processing:     2    6   0.2      6      24
+Waiting:        0    6   0.2      6      15
+Total:          2    6   0.3      6      35
+
+Percentage of the requests served within a certain time (ms)
+  50%      6
+  66%      6
+  75%      6
+  80%      6
+  90%      6
+  95%      7
+  98%      7
+  99%      7
+ 100%     35 (longest request)
+```
+
 ## C epoll version
-```c
+```shell
 Server Software:
 Server Hostname:        127.0.0.1
 Server Port:            8888
@@ -266,6 +324,97 @@ Task<void> amain() {
 
 int main() {
     asyncio::run(amain());
+    return 0;
+}
+```
+
+## Asio version
+```cpp
+//
+// async_tcp_echo_server.cpp
+// ~~~~~~~~~~~~~~~~~~~~~~~~~
+//
+// Copyright (c) 2003-2008 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+//
+// Distributed under the Boost Software License, Version 1.0. (See accompanying
+// file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+//
+
+#include <cstdlib>
+#include <iostream>
+#include <utility>
+#include <boost/asio.hpp>
+
+using boost::asio::ip::tcp;
+
+boost::asio::awaitable<void> echo(tcp::socket socket)
+{
+    try
+    {
+        char data[1024];
+        for (;;)
+        {
+            std::size_t n = co_await socket.async_read_some(boost::asio::buffer(data), boost::asio::use_awaitable);
+            co_await async_write(socket, boost::asio::buffer(data, n), boost::asio::use_awaitable);
+        }
+    }
+    catch (std::exception& e)
+    {
+        std::printf("echo Exception: %s\n", e.what());
+    }
+}
+
+class server
+{
+public:
+  server(boost::asio::io_service& io_service, short port):
+      io_service_(io_service),
+      acceptor_(io_service, tcp::endpoint(tcp::v4(), port)),
+      socket_(io_service)
+    {
+        do_accept();
+    }
+
+private:
+    void do_accept()
+    {
+        acceptor_.async_accept(socket_,
+            [this](boost::system::error_code ec)
+            {
+                boost::asio::co_spawn(io_service_.get_executor(),
+                    [socket = std::move(socket_)]() mutable
+                    { return echo(std::move(socket)); },
+                    boost::asio::detached);
+                do_accept();
+            }
+        );
+    }
+
+    boost::asio::io_service& io_service_;
+    tcp::acceptor acceptor_;
+    tcp::socket socket_;
+};
+
+int main(int argc, char* argv[])
+{
+    try
+    {
+        if (argc != 2)
+        {
+            std::cerr << "Usage: async_tcp_echo_server <port>\n";
+            return 1;
+        }
+
+        boost::asio::io_service io_service(1);
+
+        server s(io_service, std::atoi(argv[1]));
+        io_service.run();
+    }
+    catch (std::exception& e)
+    {
+        std::cerr << "Exception: " << e.what() << "\n";
+    }
+
     return 0;
 }
 ```

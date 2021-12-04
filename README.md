@@ -156,6 +156,7 @@ Using the Apache Benchmarking tool, 10000000 requests that each size is 106 byte
 |----------------|--------------------:|
 | python asyncio |            47393.59 |
 | this project   |       **164457.63** |
+| asio           |           159322.66 |
 | epoll          |           153147.79 |
 | libevent       |           136996.46 |
 | libuv          |           159937.73 |
