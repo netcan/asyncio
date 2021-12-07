@@ -16,7 +16,7 @@
    * [C libevent version](#c-libevent-version)
    * [C libuv version](#c-libuv-version)
 
-<!-- Added by: netcan, at: Sat Dec  4 10:18:29 AM HKT 2021 -->
+<!-- Added by: netcan, at: Tue Dec  7 07:54:39 PM HKT 2021 -->
 
 <!--te-->
 
@@ -68,6 +68,47 @@ Percentage of the requests served within a certain time (ms)
   98%     22
   99%     25
  100%   2816 (longest request)
+```
+
+with uvloop:
+```shell
+Server Software:
+Server Hostname:        127.0.0.1
+Server Port:            8888
+
+Document Path:          /
+Document Length:        0 bytes
+
+Concurrency Level:      1000
+Time taken for tests:   99.575 seconds
+Complete requests:      10000000
+Failed requests:        0
+Non-2xx responses:      10000000
+Keep-Alive requests:    10000000
+Total transferred:      1060000000 bytes
+HTML transferred:       0 bytes
+Requests per second:    100426.97 [#/sec] (mean)
+Time per request:       9.957 [ms] (mean)
+Time per request:       0.010 [ms] (mean, across all concurrent requests)
+Transfer rate:          10395.76 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    0   8.3      0    1033
+Processing:     2   10   7.0      7    1711
+Waiting:        0   10   7.0      7    1711
+Total:          2   10  13.6      7    2741
+
+Percentage of the requests served within a certain time (ms)
+  50%      7
+  66%     13
+  75%     13
+  80%     13
+  90%     14
+  95%     14
+  98%     14
+  99%     14
+ 100%   2741 (longest request)
 ```
 
 ## This project
@@ -318,6 +359,7 @@ Percentage of the requests served within a certain time (ms)
 
 # Test Code
 ## Python version
+asyncio:
 ```python
 import asyncio
 
@@ -341,6 +383,35 @@ async def main():
     async with server:
         await server.serve_forever()
 
+asyncio.run(main())
+```
+
+asyncio with uvloop:
+```python
+import asyncio
+import uvloop
+
+async def handle_echo(reader, writer):
+    while True:
+        data = await reader.read(200)
+        if len(data) == 0: break
+
+        writer.write(data)
+        await writer.drain()
+
+    writer.close()
+
+async def main():
+    server = await asyncio.start_server(
+        handle_echo, '127.0.0.1', 8888)
+
+    addrs = ', '.join(str(sock.getsockname()) for sock in server.sockets)
+    print(f'Serving on {addrs}')
+
+    async with server:
+        await server.serve_forever()
+
+uvloop.install()
 asyncio.run(main())
 ```
 
