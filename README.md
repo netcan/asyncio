@@ -245,7 +245,7 @@ Source:
 > ```
 > **A**: it maybe memory leak at some scenario but it's safe, the cancelled set stores handle was destroyed, it notices eventloop when handle was readying, just skip it and remove from cancelled set prevent some memory leaks.
 >
-> **A**: you are right, I find a bug at release mode when a handle is destroyed and inserted into the cancelled set, and then another coroutine is created, it has the same address as the destroyed coroutine handle!!! The loop will remove the new ready coroutine had created.
+> **A**: you are right, I find a bug at release mode when a handle is destroyed and inserted into the cancelled set, and then another coroutine is created, it has the same address as the destroyed coroutine handle!!! The loop will remove the new ready coroutine had created. fixed patch: [https://github.com/netcan/asyncio/commit/23e6a38f5d00b55037f9560845c4e44948e41709](https://github.com/netcan/asyncio/commit/23e6a38f5d00b55037f9560845c4e44948e41709)
 
 ### The coroutine performance and comparisons with other methods
 > **Q**: First off, great work! Do you have any suggestions for understanding when to use coroutines and when to not use them? They're too new to see what kind of performance they bring to the table, and I don't see much in terms of comparisons with other methods yet.
