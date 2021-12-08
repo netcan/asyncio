@@ -5,6 +5,7 @@
 #ifndef ASYNCIO_SLEEP_H
 #define ASYNCIO_SLEEP_H
 #include <asyncio/asyncio_ns.h>
+#include <asyncio/task.h>
 #include <asyncio/noncopyable.h>
 #include <chrono>
 ASYNCIO_NS_BEGIN
@@ -26,7 +27,7 @@ private:
 
 template<typename Rep, typename Period>
 auto sleep(NoWaitAtInitialSuspend, std::chrono::duration<Rep, Period> delay /* second */) -> Task<void> {
-    co_return co_await detail::SleepAwaiter {delay};
+    co_await detail::SleepAwaiter {delay};
 }
 }
 

@@ -235,6 +235,8 @@ Source:
 > }
 > ```
 > **A**: it maybe memory leak at some scenario but it's safe, the cancelled set stores handle was destroyed, it notices eventloop when handle was readying, just skip it and remove from cancelled set prevent some memory leaks.
+>
+> **A**: you are right, I find a bug at release mode when a handle is destroyed and inserted into the cancelled set, and then another coroutine is created, it has the same address as the destroyed coroutine handle!!! The loop will remove the new ready coroutine had created.
 
 > **Q**: First off, great work! Do you have any suggestions for understanding when to use coroutines and when to not use them? They're too new to see what kind of performance they bring to the table, and I don't see much in terms of comparisons with other methods yet.
 >
@@ -284,6 +286,16 @@ Source:
 > Im curious because this is something I've been thinking of implementing to aid debugging. Thanks.
 >
 > **A**: yes, it's async callstack. the point is make use of await_transform() of coroutine promise_type, that save a coroutine source_location info, in other words, when user co_await, is save await location info.(https://github.com/netcan/asyncio/blob/5ae5fdffcd065df4d9bf758741ac75647cf2f19a/include/asyncio/task.h#L113) dump backtrace is so simple, just recursive dump coroutine source_location and its continuation.
+
+> **Q**: I'm just impressed by how readable the benchmark code looks compared to most other versions. And it seems like performance actually doesn't suffer that much from it. I wish the networking in the stdlib could look somewhat like this in practice. But it probably won't be generic enough for the committee...
+>
+> EDIT: It looks like you are using different buffer sizes, is there a reason behind that?
+>
+> **A**: the python and my project codes be written by me, others are gathered by Internet.
+>
+> **Q**: It would probably make sense to benchmark equal buffer sizes, since that might have an impact on the requests per second?
+>
+> **A**: I tested equal buffer sizes, with no impact on RPS.
 
 
 ## Reference
