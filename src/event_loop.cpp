@@ -72,4 +72,9 @@ Handle::Handle() noexcept {
     auto& loop = get_event_loop();
     handle_id_ = loop.allocate_handle_id();
 }
+
+const std::source_location& Handle::get_frame_info() const {
+    static const std::source_location frame_info = std::source_location::current();
+    return frame_info;
+}
 ASYNCIO_NS_END
