@@ -11,9 +11,17 @@
    * [Tested Compiler](#tested-compiler)
    * [TODO](#todo)
    * [FAQ](#faq)
+      * [How to handle the cancelled coroutine?](#how-to-handle-the-cancelled-coroutine)
+      * [The coroutine performance and comparisons with other methods](#the-coroutine-performance-and-comparisons-with-other-methods)
+      * [Why needs some primitives(async_mutex/async_conditional_variable) even in the single threaded mode?](#why-needs-some-primitivesasync_mutexasync_conditional_variable-even-in-the-single-threaded-mode)
+      * [Why is the epoll version slower?](#why-is-the-epoll-version-slower)
+      * [io_uring better than epoll](#io_uring-better-than-epoll)
+      * [Why is python asyncio so performant?](#why-is-python-asyncio-so-performant)
+      * [How to print the coroutine callstack?](#how-to-print-the-coroutine-callstack)
+      * [Will the buffer size of the benchmark code impact on performance?](#will-the-buffer-size-of-the-benchmark-code-impact-on-performance)
    * [Reference](#reference)
 
-<!-- Added by: netcan, at: Tue Dec  7 07:54:16 PM HKT 2021 -->
+<!-- Added by: netcan, at: Wed Dec  8 10:08:59 PM HKT 2021 -->
 
 <!--te-->
 
@@ -228,6 +236,7 @@ Source:
 - [https://www.reddit.com/r/cpp/comments/r5oz8q/asyncio_imitate_pythons_asyncio_for_c/](https://www.reddit.com/r/cpp/comments/r5oz8q/asyncio_imitate_pythons_asyncio_for_c/)
 - [https://www.reddit.com/r/cpp/comments/r7xvd1/c20_coroutine_benchmark_result_using_my_coroutine/](https://www.reddit.com/r/cpp/comments/r7xvd1/c20_coroutine_benchmark_result_using_my_coroutine/)
 
+### How to handle the cancelled coroutine?
 > **Q**: technically, you can add a handle that doesn't exist in the event_loop queue. Would the cancelled event become a dangler in such a scenario?
 > ```cpp
 > void cancel_handle(Handle& handle) {
@@ -238,6 +247,7 @@ Source:
 >
 > **A**: you are right, I find a bug at release mode when a handle is destroyed and inserted into the cancelled set, and then another coroutine is created, it has the same address as the destroyed coroutine handle!!! The loop will remove the new ready coroutine had created.
 
+### The coroutine performance and comparisons with other methods
 > **Q**: First off, great work! Do you have any suggestions for understanding when to use coroutines and when to not use them? They're too new to see what kind of performance they bring to the table, and I don't see much in terms of comparisons with other methods yet.
 >
 > **A**: good question.  for my point, the coroutine is just a syntax-sugar for callback, in other words, any scenario that requires callback interfaces can be replaced by the coroutine, a typical asynchronous programming pattern involves a lot of callbacks, so use coroutine the code is very readable than callback style.
@@ -253,6 +263,7 @@ Source:
 > **A**: As far as I'm exploring, current compiler doesn't do HALO(Heap Allocation eLision Optimization,http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0981r0.html), so compare to normal function call, it costs heap allocation. but maybe coalescing caller stack memory if compiler proves that coroutine lifetime nests in caller future. but on the other side, a callback style needs programmer manually manage object lifetime between caller and callback, using shated_pointer(memory allocation), coroutine the object no needs manually memory allocation, it's in coroutine heap frame, so c++ idiom RAII works well.
 >
 
+### Why needs some primitives(async_mutex/async_conditional_variable) even in the single threaded mode?
 > **Q**: I'm curious, could you share what these primitives(async_mutex, sync_wait) would do (I understand the point of when_all)?
 >
 > **A**: To be able to create the whole application asynchronous we shouldn't block any thread from our thread pool. Traditional synchronization primitives that use os scheduler like std::mutex std::condition_variable are useless in such scenarios, we need this primitives to cooperate with internal application scheduler.
@@ -263,10 +274,12 @@ Source:
 >
 > **A**: these primitives are needs. such a game scenario, server must await to collect all commands of clients, then continue to do game logical, this needs condition_variable.
 
+### Why is the epoll version slower?
 > **Q**: Why is the epoll version slower? Shouldn't that have less overhead?
 >
 > **A**: maybe c code version isn't effective, and test is undulate between +-5000 rps.
 
+### `io_uring` better than `epoll`
 > **Q**: > The result may be incredible, but it is possible, the magnitude of IO is milliseconds
 >
 > Depends, really. With io_uring, or user-space network stacks, you get IO in the microseconds/nanoseconds range. The best ping-pong I have seen so far with software, measured first byte in the server, first byte out, was 1.2 microseconds. This includes: the network card receiving the bytes, the PCI bus transferring them to the CPU, the CPU reading the query and writing the response, the PCI bus transferring them to the network card, the network card sending the bytes.
@@ -275,18 +288,21 @@ Source:
 >
 > **A**: If I remember correctly, a system call is about 100ns(benchmark empty epoll_wait), but io_uring may better than epoll, I see other guy compare their.
 
+### Why is python asyncio so performant?
 > **Q**: Why is python asyncio so performant?
 >
 > **A**: async program is IO bound.
 >
 > **A**: A lot of very expensive people have optimised the snot out of python asyncio over years. It'll always be slower in the fixed overhead sense than C++, but in terms of scalability and corner case handling it ought to be close to optimal.
 
+### How to print the coroutine callstack?
 > **Q**: In one example you print the call stack. Am I correct in understanding that this is the "async call stack" as opposed to the traditional call stack? And if so how did you capture this info?
 >
 > Im curious because this is something I've been thinking of implementing to aid debugging. Thanks.
 >
 > **A**: yes, it's async callstack. the point is make use of await_transform() of coroutine promise_type, that save a coroutine source_location info, in other words, when user co_await, is save await location info.(https://github.com/netcan/asyncio/blob/5ae5fdffcd065df4d9bf758741ac75647cf2f19a/include/asyncio/task.h#L113) dump backtrace is so simple, just recursive dump coroutine source_location and its continuation.
 
+### Will the buffer size of the benchmark code impact on performance?
 > **Q**: I'm just impressed by how readable the benchmark code looks compared to most other versions. And it seems like performance actually doesn't suffer that much from it. I wish the networking in the stdlib could look somewhat like this in practice. But it probably won't be generic enough for the committee...
 >
 > EDIT: It looks like you are using different buffer sizes, is there a reason behind that?
