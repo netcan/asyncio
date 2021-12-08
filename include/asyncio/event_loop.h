@@ -8,7 +8,7 @@
 #include <asyncio/concept/future.h>
 #include <asyncio/selector/selector.h>
 #include <utility>
-#include <set>
+#include <unordered_set>
 #include <algorithm>
 #include <queue>
 #include <chrono>
@@ -17,16 +17,26 @@
 ASYNCIO_NS_BEGIN
 class EventLoop: private NonCopyable {
     using MSDuration = std::chrono::milliseconds;
+    // handle maybe destroyed, using the increasing id to track the lifetime of handle.
+    // don't directly using a raw pointer to track coroutine lifetime,
+    // because a destroyed coroutine may has the same address as a new ready coroutine has created.
+    struct HandleInfo {
+        HandleId id;
+        Handle* handle;
+    };
 
 public:
-    EventLoop() {
-        auto now = std::chrono::system_clock::now();
+    EventLoop() { auto now = std::chrono::system_clock::now();
         start_time_ = duration_cast<MSDuration>(now.time_since_epoch());
     }
 
     MSDuration time() {
         auto now = std::chrono::system_clock::now();
         return duration_cast<MSDuration>(now.time_since_epoch()) - start_time_;
+    }
+
+    HandleId allocate_handle_id() {
+        return handle_alloc_id_++;
     }
 
     bool is_stop() {
@@ -41,17 +51,18 @@ public:
     template<typename Rep, typename Period>
     void call_at(std::chrono::duration<Rep, Period> when, Handle& callback) {
         callback.set_state(PromiseState::PENDING);
-        schedule_.emplace_back(std::make_pair(duration_cast<MSDuration>(when), &callback));
+        schedule_.emplace_back(std::make_pair(duration_cast<MSDuration>(when),
+                    HandleInfo{callback.get_handle_id(), &callback}));
         std::ranges::push_heap(schedule_, std::ranges::greater{}, &TimerHandle::first);
     }
 
     void cancel_handle(Handle& handle) {
-        cancelled_.insert(&handle);
+        cancelled_.insert(handle.get_handle_id());
     }
 
     void call_soon(Handle& callback) {
         callback.set_state(PromiseState::PENDING);
-        ready_.emplace(&callback);
+        ready_.push({callback.get_handle_id(), &callback});
     }
 
     template<concepts::Future Fut>
@@ -90,11 +101,12 @@ private:
 
 private:
     MSDuration start_time_;
-    std::queue<Handle*> ready_;
-    std::set<Handle*> cancelled_;
+    std::queue<HandleInfo> ready_;
+    std::unordered_set<HandleId> cancelled_;
     Selector selector_;
-    using TimerHandle = std::pair<MSDuration, Handle*>;
+    using TimerHandle = std::pair<MSDuration, HandleInfo>;
     std::vector<TimerHandle> schedule_; // min time heap
+    static HandleId handle_alloc_id_;
 };
 
 EventLoop& get_event_loop();

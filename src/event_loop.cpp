@@ -23,8 +23,8 @@ void EventLoop::run_once() {
     std::optional<MSDuration> timeout;
     // Remove delayed calls that were cancelled from head of queue.
     while (! schedule_.empty()) {
-        auto&& [when, handle] = schedule_[0];
-        if (auto iter = cancelled_.find(handle); iter != cancelled_.end()) {
+        auto&& [when, handle_info] = schedule_[0];
+        if (auto iter = cancelled_.find(handle_info.id); iter != cancelled_.end()) {
             ranges::pop_heap(schedule_,std::ranges::greater{}, &TimerHandle::first);
             schedule_.pop_back();
             cancelled_.erase(iter);
@@ -43,22 +43,22 @@ void EventLoop::run_once() {
     auto event_lists = selector_.select(timeout.has_value() ? timeout->count() : -1);
     for (auto&& event: event_lists) {
         Handle* continuation_ = reinterpret_cast<Handle*>(event.data);
-        ready_.emplace(continuation_);
+        ready_.push({continuation_->get_handle_id(), continuation_});
     }
 
     auto end_time = time();
     while (! schedule_.empty()) {
-        auto&& [when, handle] = schedule_[0];
+        auto&& [when, handle_info] = schedule_[0];
         if (when >= end_time) break;
-        ready_.emplace(handle);
+        ready_.push(handle_info);
         ranges::pop_heap(schedule_,std::ranges::greater{}, &TimerHandle::first);
         schedule_.pop_back();
     }
 
     for (size_t ntodo = ready_.size(), i = 0; i < ntodo ; ++i ) {
-        auto handle = ready_.front();
+        auto [handle_id, handle] = ready_.front();
         ready_.pop();
-        if (auto iter = cancelled_.find(handle); iter != cancelled_.end()) {
+        if (auto iter = cancelled_.find(handle_id); iter != cancelled_.end()) {
             cancelled_.erase(iter);
         } else {
             handle->run();
@@ -66,4 +66,10 @@ void EventLoop::run_once() {
     }
 }
 
+HandleId EventLoop::handle_alloc_id_ = 0;
+
+Handle::Handle() noexcept {
+    auto& loop = get_event_loop();
+    handle_id_ = loop.allocate_handle_id();
+}
 ASYNCIO_NS_END

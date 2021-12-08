@@ -15,6 +15,9 @@ enum class PromiseState: uint8_t {
     PENDING,
 };
 
+// for cancelled
+using HandleId = uint64_t;
+
 struct Handle { // type erase for EventLoop
     virtual void run() = 0;
     std::string frame_name() const {
@@ -24,12 +27,18 @@ struct Handle { // type erase for EventLoop
     }
     virtual void dump_backtrace(size_t depth = 0) const {};
     virtual void set_state(PromiseState state) {}
+    HandleId get_handle_id() { return handle_id_; }
+    Handle() noexcept;
     virtual ~Handle() = default;
+
 private:
     virtual const std::source_location& get_frame_info() const {
         static const std::source_location frame_info = std::source_location::current();
         return frame_info;
     }
+
+private:
+    HandleId handle_id_;
 };
 
 ASYNCIO_NS_END
