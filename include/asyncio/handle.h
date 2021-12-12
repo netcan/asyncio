@@ -19,6 +19,7 @@ enum class PromiseState: uint8_t {
 using HandleId = uint64_t;
 
 struct Handle { // type erase for EventLoop
+    Handle() noexcept: handle_id_(handle_id_generation_++) {}
     virtual void run() = 0;
     std::string frame_name() const {
         const auto& frame_info = get_frame_info();
@@ -28,7 +29,6 @@ struct Handle { // type erase for EventLoop
     virtual void dump_backtrace(size_t depth = 0) const {};
     virtual void set_state(PromiseState state) {}
     HandleId get_handle_id() { return handle_id_; }
-    Handle() noexcept;
     virtual ~Handle() = default;
 
 private:
@@ -36,6 +36,7 @@ private:
 
 private:
     HandleId handle_id_;
+    static HandleId handle_id_generation_;
 };
 
 ASYNCIO_NS_END

@@ -36,10 +36,6 @@ public:
         return duration_cast<MSDuration>(now.time_since_epoch()) - start_time_;
     }
 
-    HandleId allocate_handle_id() {
-        return handle_alloc_id_++;
-    }
-
     bool is_stop() {
         return schedule_.empty() && ready_.empty() && selector_.is_stop();
     }
@@ -107,7 +103,6 @@ private:
     Selector selector_;
     using TimerHandle = std::pair<MSDuration, HandleInfo>;
     std::vector<TimerHandle> schedule_; // min time heap
-    static HandleId handle_alloc_id_;
 };
 
 EventLoop& get_event_loop();

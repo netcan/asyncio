@@ -66,12 +66,7 @@ void EventLoop::run_once() {
     }
 }
 
-HandleId EventLoop::handle_alloc_id_ = 0;
-
-Handle::Handle() noexcept {
-    auto& loop = get_event_loop();
-    handle_id_ = loop.allocate_handle_id();
-}
+HandleId Handle::handle_id_generation_ = 0;
 
 const std::source_location& Handle::get_frame_info() const {
     static const std::source_location frame_info = std::source_location::current();
