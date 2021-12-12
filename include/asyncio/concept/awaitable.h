@@ -6,6 +6,7 @@
 #define ASYNCIO_AWAITABLE_H
 #include <asyncio/asyncio_ns.h>
 #include <coroutine>
+#include <utility>
 ASYNCIO_NS_BEGIN
 namespace detail {
 template<typename A>
@@ -40,6 +41,10 @@ concept Awaitable = requires {
 
 template<concepts::Awaitable A>
 using AwaitResult = decltype(std::declval<detail::GetAwaiter_t<A>>().await_resume());
+
+// check archtypes
+static_assert(concepts::Awaitable<std::suspend_always>);
+static_assert(concepts::Awaitable<std::suspend_never>);
 
 ASYNCIO_NS_END
 #endif // ASYNCIO_AWAITABLE_H

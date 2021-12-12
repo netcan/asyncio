@@ -26,7 +26,8 @@ class EventLoop: private NonCopyable {
     };
 
 public:
-    EventLoop() { auto now = std::chrono::system_clock::now();
+    EventLoop() {
+        auto now = std::chrono::system_clock::now();
         start_time_ = duration_cast<MSDuration>(now.time_since_epoch());
     }
 
