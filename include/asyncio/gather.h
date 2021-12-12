@@ -5,13 +5,15 @@
 #ifndef ASYNCIO_GATHER_H
 #define ASYNCIO_GATHER_H
 #include <asyncio/asyncio_ns.h>
+#include <asyncio/task.h>
 #include <asyncio/void_value.h>
+#include <asyncio/noncopyable.h>
 #include <asyncio/concept/awaitable.h>
+#include <stdexcept>
 #include <tuple>
 #include <variant>
 ASYNCIO_NS_BEGIN
 namespace detail {
-
 template<typename... Rs>
 class GatherAwaiter: NonCopyable {
     using ResultTypes = std::tuple<GetTypeIfVoid_t<Rs>...>;
@@ -101,7 +103,7 @@ GatherAwaiterRepositry(Futs&&...) -> GatherAwaiterRepositry<Futs...>;
 template<concepts::Awaitable... Futs>
 auto gather(NoWaitAtInitialSuspend, Futs&&... futs) // need NoWaitAtInitialSuspend to lift futures lifetime early
 -> Task<std::tuple<GetTypeIfVoid_t<AwaitResult<Futs>>...>> { // lift awaitable type(GatherAwaiterRepositry) to coroutine
-    co_return co_await detail::GatherAwaiterRepositry{ std::forward<Futs>(futs)... };
+    co_return co_await GatherAwaiterRepositry { std::forward<Futs>(futs)... };
 }
 }
 
