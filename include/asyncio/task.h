@@ -7,6 +7,7 @@
 #include <asyncio/handle.h>
 #include <asyncio/event_loop.h>
 #include <asyncio/result.h>
+#include <asyncio/concept/proimse.h>
 #include <coroutine>
 #include <cassert>
 #include <variant>
@@ -147,5 +148,6 @@ private:
     coro_handle handle_;
 };
 
+static_assert(concepts::promise<Task<>::promise_type>);
 ASYNCIO_NS_END
 #endif // ASYNCIO_TASK_H
