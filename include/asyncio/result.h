@@ -56,7 +56,7 @@ struct Result<void> {
     constexpr bool has_value() const noexcept {
         return result_.has_value();
     }
-    constexpr void return_void() noexcept {
+    void return_void() noexcept {
         result_.emplace(nullptr);
     }
     void result() {

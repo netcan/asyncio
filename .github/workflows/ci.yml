@@ -16,8 +16,6 @@ jobs:
 
       - name: build
         run: |
-          cc --version
-          c++ --version
           mkdir build-debug
           cmake -H. -Bbuild-debug -DCMAKE_BUILD_TYPE=Debug
           cmake --build build-debug
