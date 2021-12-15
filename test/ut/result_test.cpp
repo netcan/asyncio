@@ -179,11 +179,12 @@ SCENARIO("test pass parameters to the coroutine frame") {
     }
 
     GIVEN("pass by lvalue ref") {
-        auto coro = [](TestCounted& count) -> Task<> {
-            REQUIRE(count.alive_counts() == 1);
+        TestCounted count;
+        auto coro = [&](TestCounted& cnt) -> Task<> {
+            REQUIRE(cnt.alive_counts() == 1);
+            REQUIRE(&cnt == &count);
             co_return;
         };
-        TestCounted count;
         loop.run_until_complete(coro(count));
         REQUIRE(TestCounted::default_construct_counts == 1);
         REQUIRE(TestCounted::construct_counts() == 1);
