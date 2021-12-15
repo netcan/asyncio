@@ -126,12 +126,15 @@ SCENARIO("test result T") {
 
 SCENARIO("test pass parameters to the coroutine frame") {
     EventLoop& loop = get_event_loop();
-    using TestCounted = Counted<>;
+    using TestCounted = Counted<{
+        .move_assignable=false,
+        .copy_assignable=false
+    }>;
     TestCounted::reset_count();
 
-    GIVEN("pass by value") {
+    GIVEN("pass by rvalue") {
         auto coro = [](TestCounted count) -> Task<> {
-            (void) count;
+            REQUIRE(count.alive_counts() == 2);
             co_return;
         };
         loop.run_until_complete(coro(TestCounted{}));
@@ -140,9 +143,44 @@ SCENARIO("test pass parameters to the coroutine frame") {
         REQUIRE(TestCounted::alive_counts() == 0);
     }
 
+    GIVEN("pass by lvalue") {
+        auto coro = [](TestCounted count) -> Task<> {
+            REQUIRE(TestCounted::copy_construct_counts == 1);
+            REQUIRE(TestCounted::move_construct_counts == 1);
+            REQUIRE(count.alive_counts() == 3);
+            co_return;
+        };
+        TestCounted count;
+        loop.run_until_complete(coro(count));
+
+        REQUIRE(TestCounted::default_construct_counts == 1);
+        REQUIRE(TestCounted::copy_construct_counts == 1);
+        REQUIRE(TestCounted::move_construct_counts == 1);
+        REQUIRE(TestCounted::alive_counts() == 1);
+        REQUIRE(count.id_ != -1);
+    }
+
+    GIVEN("pass by xvalue") {
+        auto coro = [](TestCounted count) -> Task<> {
+            REQUIRE(TestCounted::copy_construct_counts == 0);
+            REQUIRE(TestCounted::move_construct_counts == 2);
+            REQUIRE(count.alive_counts() == 3);
+            REQUIRE(count.id_ != -1);
+            co_return;
+        };
+        TestCounted count;
+        loop.run_until_complete(coro(std::move(count)));
+
+        REQUIRE(TestCounted::default_construct_counts == 1);
+        REQUIRE(TestCounted::copy_construct_counts == 0);
+        REQUIRE(TestCounted::move_construct_counts == 2);
+        REQUIRE(TestCounted::alive_counts() == 1);
+        REQUIRE(count.id_ == -1);
+    }
+
     GIVEN("pass by lvalue ref") {
         auto coro = [](TestCounted& count) -> Task<> {
-            (void) count;
+            REQUIRE(count.alive_counts() == 1);
             co_return;
         };
         TestCounted count;
@@ -154,7 +192,7 @@ SCENARIO("test pass parameters to the coroutine frame") {
 
     GIVEN("pass by rvalue ref") {
         auto coro = [](TestCounted&& count) -> Task<> {
-            (void) count;
+            REQUIRE(count.alive_counts() == 1);
             co_return;
         };
         loop.run_until_complete(coro(TestCounted{}));
