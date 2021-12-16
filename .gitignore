@@ -8,3 +8,4 @@ compile_commands.json
 /*.p
 /*.data
 /result
+*.log

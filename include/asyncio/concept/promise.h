@@ -10,7 +10,7 @@ template<typename Promise>
 concept promise = requires (Promise p) {
     p.get_return_object();
     { p.initial_suspend() } -> Awaitable;
-    { p.final_suspend() } -> Awaitable;
+    { p.final_suspend() } noexcept -> Awaitable;
     p.unhandled_exception();
     requires (requires(int v) { p.return_value(v); } ||
               requires        { p.return_void();   });
