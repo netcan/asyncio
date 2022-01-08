@@ -11,7 +11,9 @@ ASYNCIO_NS_BEGIN
 template<concepts::Future Fut>
 decltype(auto) run(Fut&& main) {
     auto& loop = get_event_loop();
-    return loop.run_until_complete(std::forward<Fut>(main));
+    loop.call_soon(main.get_resumable());
+    loop.run_until_complete();
+    return main.get_result();
 }
 
 ASYNCIO_NS_END

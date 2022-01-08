@@ -3,7 +3,7 @@
 //
 #include <catch2/catch_test_macros.hpp>
 #include <asyncio/result.h>
-#include <asyncio/event_loop.h>
+#include <asyncio/runner.h>
 #include <asyncio/task.h>
 #include "counted.h"
 
@@ -125,7 +125,6 @@ SCENARIO("test result T") {
 
 
 SCENARIO("test pass parameters to the coroutine frame") {
-    EventLoop& loop = get_event_loop();
     using TestCounted = Counted<{
         .move_assignable=false,
         .copy_assignable=false
@@ -137,7 +136,7 @@ SCENARIO("test pass parameters to the coroutine frame") {
             REQUIRE(count.alive_counts() == 2);
             co_return;
         };
-        loop.run_until_complete(coro(TestCounted{}));
+        asyncio::run(coro(TestCounted{}));
         REQUIRE(TestCounted::default_construct_counts == 1);
         REQUIRE(TestCounted::move_construct_counts == 1);
         REQUIRE(TestCounted::alive_counts() == 0);
@@ -151,7 +150,7 @@ SCENARIO("test pass parameters to the coroutine frame") {
             co_return;
         };
         TestCounted count;
-        loop.run_until_complete(coro(count));
+        asyncio::run(coro(count));
 
         REQUIRE(TestCounted::default_construct_counts == 1);
         REQUIRE(TestCounted::copy_construct_counts == 1);
@@ -169,7 +168,7 @@ SCENARIO("test pass parameters to the coroutine frame") {
             co_return;
         };
         TestCounted count;
-        loop.run_until_complete(coro(std::move(count)));
+        asyncio::run(coro(std::move(count)));
 
         REQUIRE(TestCounted::default_construct_counts == 1);
         REQUIRE(TestCounted::copy_construct_counts == 0);
@@ -185,7 +184,7 @@ SCENARIO("test pass parameters to the coroutine frame") {
             REQUIRE(&cnt == &count);
             co_return;
         };
-        loop.run_until_complete(coro(count));
+        asyncio::run(coro(count));
         REQUIRE(TestCounted::default_construct_counts == 1);
         REQUIRE(TestCounted::construct_counts() == 1);
         REQUIRE(TestCounted::alive_counts() == 1);
@@ -196,7 +195,7 @@ SCENARIO("test pass parameters to the coroutine frame") {
             REQUIRE(count.alive_counts() == 1);
             co_return;
         };
-        loop.run_until_complete(coro(TestCounted{}));
+        asyncio::run(coro(TestCounted{}));
         REQUIRE(TestCounted::default_construct_counts == 1);
         REQUIRE(TestCounted::construct_counts() == 1);
         REQUIRE(TestCounted::alive_counts() == 0);

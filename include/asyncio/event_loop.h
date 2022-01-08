@@ -45,28 +45,13 @@ public:
         call_at(time() + duration_cast<MSDuration>(delay), callback);
     }
 
-    template<typename Rep, typename Period>
-    void call_at(std::chrono::duration<Rep, Period> when, Handle& callback) {
-        callback.set_state(PromiseState::PENDING);
-        schedule_.emplace_back(std::make_pair(duration_cast<MSDuration>(when),
-                    HandleInfo{callback.get_handle_id(), &callback}));
-        std::ranges::push_heap(schedule_, std::ranges::greater{}, &TimerHandle::first);
-    }
-
     void cancel_handle(Handle& handle) {
         cancelled_.insert(handle.get_handle_id());
     }
 
-    void call_soon(Handle& callback) {
-        callback.set_state(PromiseState::PENDING);
-        ready_.push({callback.get_handle_id(), &callback});
-    }
-
-    template<concepts::Future Fut>
-    decltype(auto) run_until_complete(Fut&& future) {
-        call_soon(future.get_resumable());
-        run_forever();
-        return future.get_result();
+    void call_soon(Handle& handle) {
+        handle.set_state(PromiseState::PENDING);
+        ready_.push({handle.get_handle_id(), &handle});
     }
 
     struct WaitEventAwaiter {
@@ -91,9 +76,17 @@ public:
         return WaitEventAwaiter(selector_, event);
     }
 
-    void run_forever();
+    void run_until_complete();
 
 private:
+    template<typename Rep, typename Period>
+    void call_at(std::chrono::duration<Rep, Period> when, Handle& callback) {
+        callback.set_state(PromiseState::PENDING);
+        schedule_.emplace_back(std::make_pair(duration_cast<MSDuration>(when),
+                    HandleInfo{callback.get_handle_id(), &callback}));
+        std::ranges::push_heap(schedule_, std::ranges::greater{}, &TimerHandle::first);
+    }
+
     void run_once();
 
 private:

@@ -13,7 +13,7 @@ EventLoop& get_event_loop() {
     return loop;
 }
 
-void EventLoop::run_forever() {
+void EventLoop::run_until_complete() {
     while (! is_stop()) {
         run_once();
     }
