@@ -68,7 +68,7 @@ void EventLoop::run_once() {
 
 HandleId Handle::handle_id_generation_ = 0;
 
-const std::source_location& Handle::get_frame_info() const {
+const std::source_location& CoroHandle::get_frame_info() const {
     static const std::source_location frame_info = std::source_location::current();
     return frame_info;
 }

@@ -76,7 +76,7 @@ struct Task: private NonCopyable {
         return Awaiter {handle_};
     }
 
-    struct promise_type: Handle, Result<R> {
+    struct promise_type: CoroHandle, Result<R> {
         promise_type() = default;
 
         template<typename... Args> // from free function
@@ -137,7 +137,7 @@ struct Task: private NonCopyable {
         // to auto delete by final awaiter
         PromiseState state_ {PromiseState::UNSCHEDULED};
         const bool wait_at_initial_suspend_ {true};
-        Handle* continuation_ {};
+        CoroHandle* continuation_ {};
         std::source_location frame_info_{};
     };
 

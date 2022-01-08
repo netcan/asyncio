@@ -21,22 +21,23 @@ using HandleId = uint64_t;
 struct Handle { // type erase for EventLoop
     Handle() noexcept: handle_id_(handle_id_generation_++) {}
     virtual void run() = 0;
+    virtual void set_state(PromiseState state) {}
+    HandleId get_handle_id() { return handle_id_; }
+    virtual ~Handle() = default;
+private:
+    HandleId handle_id_;
+    static HandleId handle_id_generation_;
+};
+
+struct CoroHandle: Handle {
     std::string frame_name() const {
         const auto& frame_info = get_frame_info();
         return fmt::format("{} at {}:{}", frame_info.function_name(),
                            frame_info.file_name(), frame_info.line());
     }
     virtual void dump_backtrace(size_t depth = 0) const {};
-    virtual void set_state(PromiseState state) {}
-    HandleId get_handle_id() { return handle_id_; }
-    virtual ~Handle() = default;
-
 private:
     virtual const std::source_location& get_frame_info() const;
-
-private:
-    HandleId handle_id_;
-    static HandleId handle_id_generation_;
 };
 
 ASYNCIO_NS_END
