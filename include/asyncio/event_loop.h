@@ -17,14 +17,6 @@
 ASYNCIO_NS_BEGIN
 class EventLoop: private NonCopyable {
     using MSDuration = std::chrono::milliseconds;
-    // handle maybe destroyed, using the increasing id to track the lifetime of handle.
-    // don't directly using a raw pointer to track coroutine lifetime,
-    // because a destroyed coroutine may has the same address as a new ready coroutine has created.
-    struct HandleInfo {
-        HandleId id;
-        Handle* handle;
-    };
-
 public:
     EventLoop() {
         auto now = std::chrono::system_clock::now();
@@ -34,10 +26,6 @@ public:
     MSDuration time() {
         auto now = std::chrono::system_clock::now();
         return duration_cast<MSDuration>(now.time_since_epoch()) - start_time_;
-    }
-
-    bool is_stop() {
-        return schedule_.empty() && ready_.empty() && selector_.is_stop();
     }
 
     template<typename Rep, typename Period>
@@ -58,9 +46,11 @@ public:
         constexpr bool await_ready() const noexcept { return false; }
         template<typename Promise>
         constexpr void await_suspend(std::coroutine_handle<Promise> handle) noexcept {
-            auto& promise = handle.promise();
-            promise.set_state(PromiseState::PENDING);
-            event_.data = static_cast<Handle*>(&promise);
+            handle.promise().set_state(PromiseState::PENDING);
+            event_.handle_info = {
+                .id = handle.promise().get_handle_id(),
+                .handle = &handle.promise()
+            };
             selector_.register_event(event_);
         }
         void await_resume() noexcept {
@@ -79,11 +69,15 @@ public:
     void run_until_complete();
 
 private:
+    bool is_stop() {
+        return schedule_.empty() && ready_.empty() && selector_.is_stop();
+    }
+
     template<typename Rep, typename Period>
     void call_at(std::chrono::duration<Rep, Period> when, Handle& callback) {
         callback.set_state(PromiseState::PENDING);
-        schedule_.emplace_back(std::make_pair(duration_cast<MSDuration>(when),
-                    HandleInfo{callback.get_handle_id(), &callback}));
+        schedule_.emplace_back(duration_cast<MSDuration>(when),
+                               HandleInfo{callback.get_handle_id(), &callback});
         std::ranges::push_heap(schedule_, std::ranges::greater{}, &TimerHandle::first);
     }
 
@@ -91,11 +85,11 @@ private:
 
 private:
     MSDuration start_time_;
-    std::queue<HandleInfo> ready_;
-    std::unordered_set<HandleId> cancelled_;
     Selector selector_;
+    std::queue<HandleInfo> ready_;
     using TimerHandle = std::pair<MSDuration, HandleInfo>;
     std::vector<TimerHandle> schedule_; // min time heap
+    std::unordered_set<HandleId> cancelled_;
 };
 
 EventLoop& get_event_loop();

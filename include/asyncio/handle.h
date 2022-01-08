@@ -29,6 +29,14 @@ private:
     static HandleId handle_id_generation_;
 };
 
+// handle maybe destroyed, using the increasing id to track the lifetime of handle.
+// don't directly using a raw pointer to track coroutine lifetime,
+// because a destroyed coroutine may has the same address as a new ready coroutine has created.
+struct HandleInfo {
+    HandleId id;
+    Handle* handle;
+};
+
 struct CoroHandle: Handle {
     std::string frame_name() const {
         const auto& frame_info = get_frame_info();

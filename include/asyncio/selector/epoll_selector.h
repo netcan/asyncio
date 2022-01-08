@@ -26,7 +26,7 @@ struct EpollSelector {
         std::vector<Event> result;
         for (size_t i = 0; i < ndfs; ++i) {
             result.emplace_back(Event {
-                .data = events[i].data.ptr
+                .handle_info = *reinterpret_cast<HandleInfo*>(events[i].data.ptr)
             });
         }
         return result;
@@ -36,7 +36,7 @@ struct EpollSelector {
     }
     bool is_stop() { return register_event_count_ == 1; }
     void register_event(const Event& event) {
-        epoll_event ev{ .events = event.events, .data {.ptr = event.data } };
+        epoll_event ev{ .events = event.events, .data {.ptr = const_cast<HandleInfo*>(&event.handle_info) } };
         if (epoll_ctl(epfd_, EPOLL_CTL_ADD, event.fd, &ev) == 0) {
             ++register_event_count_;
         }

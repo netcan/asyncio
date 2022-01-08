@@ -6,12 +6,13 @@
 #define ASYNCIO_EVENT_H
 
 #include <asyncio/asyncio_ns.h>
+#include <asyncio/handle.h>
 #include <cstdint>
 ASYNCIO_NS_BEGIN
 struct Event {
     int fd;
     uint32_t events;
-    void* data {nullptr};
+    HandleInfo handle_info;
 };
 ASYNCIO_NS_END
 
