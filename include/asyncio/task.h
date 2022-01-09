@@ -21,8 +21,16 @@ struct Task: private NonCopyable {
     struct promise_type;
     using coro_handle = std::coroutine_handle<promise_type>;
 
-    Handle& get_resumable() {
-        return handle_.promise();
+    void schedule() const {
+        if (handle_.promise().state_ != PromiseState::PENDING){
+            get_event_loop().call_soon(handle_.promise());
+        }
+    }
+
+    void cancel() const {
+        if (handle_.promise().state_ == PromiseState::PENDING) {
+            get_event_loop().cancel_handle(handle_.promise());
+        }
     }
 
     explicit Task(coro_handle h) noexcept: handle_(h) {}
@@ -31,10 +39,7 @@ struct Task: private NonCopyable {
 
     ~Task() {
         if (handle_) {
-            if (handle_.promise().state_ == PromiseState::PENDING) {
-                EventLoop& loop_{get_event_loop()};
-                loop_.cancel_handle(handle_.promise());
-            }
+            cancel();
             handle_.destroy();
         }
     }
@@ -52,8 +57,7 @@ struct Task: private NonCopyable {
 
             // if not schedule_task
             if (self_coro_.promise().state_ != PromiseState::PENDING) {
-                EventLoop& loop_{get_event_loop()};
-                loop_.call_soon(self_coro_.promise());
+                get_event_loop().call_soon(self_coro_.promise());
             }
         }
         coro_handle self_coro_ {};
@@ -98,8 +102,7 @@ struct Task: private NonCopyable {
             template<typename Promise>
             constexpr void await_suspend(std::coroutine_handle<Promise> h) const noexcept {
                 if (h.promise().continuation_) {
-                    EventLoop& loop_{get_event_loop()};
-                    loop_.call_soon(*h.promise().continuation_);
+                    get_event_loop().call_soon(*h.promise().continuation_);
                 }
             }
             constexpr void await_resume() const noexcept {}
@@ -147,5 +150,6 @@ private:
 };
 
 static_assert(concepts::Promise<Task<>::promise_type>);
+static_assert(concepts::Future<Task<>>);
 ASYNCIO_NS_END
 #endif // ASYNCIO_TASK_H

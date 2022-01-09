@@ -33,19 +33,18 @@ struct WaitForAwaiter: NonCopyable {
         }
     }
 
-    template<concepts::Awaitable Fut>
-    WaitForAwaiter(Fut&& fut, Duration timeout)
-            : wait_for_task_(wait_for_task(no_wait_at_initial_suspend,
-                                           std::forward<Fut>(fut)))
-            , timeout_handle_(*this, timeout, fut.get_resumable())
+    template<concepts::Scheduable Fut>
+    WaitForAwaiter(Fut& fut, Duration timeout)
+            : wait_for_task_ {wait_for_task(no_wait_at_initial_suspend, fut)}
+            , timeout_handle_(*this, timeout, [&fut] { fut.cancel(); })
             { }
 
 private:
     template<concepts::Awaitable Fut>
-    Task<> wait_for_task(NoWaitAtInitialSuspend, Fut&& fut) {
+    Task<> wait_for_task(NoWaitAtInitialSuspend, Fut& fut) {
         try {
-            if constexpr (std::is_void_v<R>) { co_await std::forward<Fut>(fut); }
-            else { result_.set_value(co_await std::forward<Fut>(fut)); }
+            if constexpr (std::is_void_v<R>) { co_await fut; }
+            else { result_.set_value(co_await fut); }
         } catch(...) {
             result_.unhandled_exception();
         }
@@ -61,20 +60,21 @@ private:
 
 private:
     struct TimeoutHandle: Handle {
-        TimeoutHandle(WaitForAwaiter& awaiter, Duration timeout, Handle& handle)
-        : awaiter_(awaiter), current_task_(handle) {
+        TimeoutHandle(WaitForAwaiter& awaiter, Duration timeout,
+                std::function<void()> cancel_cb)
+        : awaiter_(awaiter), cancel_current_task_(cancel_cb) {
             EventLoop& loop{get_event_loop()};
             loop.call_later(timeout, *this);
         }
         void run() final { // timeout!
-            EventLoop& loop{get_event_loop()};
-            loop.cancel_handle(current_task_);
+            cancel_current_task_();
             awaiter_.result_.set_exception(std::make_exception_ptr(TimeoutError{}));
+            EventLoop& loop{get_event_loop()};
             loop.call_soon(*awaiter_.continuation_);
         }
 
         WaitForAwaiter& awaiter_;
-        Handle& current_task_;
+        std::function<void()> cancel_current_task_;
     } timeout_handle_;
 };
 
@@ -87,7 +87,7 @@ struct WaitForAwaiterRegistry {
     : fut_(std::forward<Fut>(fut)), duration_(duration) { }
 
     auto operator co_await () && {
-        return WaitForAwaiter{std::move(fut_), duration_};
+        return WaitForAwaiter{fut_, duration_};
     }
 private:
     Fut fut_; // lift Future's lifetime

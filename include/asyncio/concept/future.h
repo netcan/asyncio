@@ -11,10 +11,17 @@
 ASYNCIO_NS_BEGIN
 namespace concepts {
 template<typename Fut>
-concept Future = concepts::Awaitable<Fut> && requires(Fut fut) {
+concept Future = Awaitable<Fut> && requires(Fut fut) {
     typename std::remove_cvref_t<Fut>::promise_type;
     fut.get_result();
 };
+
+template<typename Sch>
+concept Scheduable = Future<Sch> && requires(Sch sch) {
+    sch.schedule();
+    sch.cancel();
+};
+
 };
 ASYNCIO_NS_END
 

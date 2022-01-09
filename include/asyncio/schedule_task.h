@@ -8,12 +8,11 @@
 #include <asyncio/concept/future.h>
 ASYNCIO_NS_BEGIN
 
-template<concepts::Future Fut>
+template<concepts::Scheduable Sch>
 [[nodiscard("discard(detached) a task will not schedule to run")]]
-decltype(auto) schedule_task(Fut&& fut) {
-    auto& loop = get_event_loop();
-    loop.call_soon(fut.get_resumable());
-    return std::forward<Fut>(fut);
+decltype(auto) schedule_task(Sch&& fut) {
+    std::forward<Sch>(fut).schedule();
+    return std::forward<Sch>(fut);
 }
 
 ASYNCIO_NS_END

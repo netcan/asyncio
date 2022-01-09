@@ -34,6 +34,7 @@ public:
     }
 
     void cancel_handle(Handle& handle) {
+        handle.set_state(PromiseState::UNSCHEDULED);
         cancelled_.insert(handle.get_handle_id());
     }
 

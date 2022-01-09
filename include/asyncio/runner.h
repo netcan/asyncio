@@ -8,12 +8,11 @@
 #include <asyncio/event_loop.h>
 
 ASYNCIO_NS_BEGIN
-template<concepts::Future Fut>
-decltype(auto) run(Fut&& main) {
-    auto& loop = get_event_loop();
-    loop.call_soon(main.get_resumable());
-    loop.run_until_complete();
-    return main.get_result();
+template<concepts::Scheduable Sch>
+decltype(auto) run(Sch&& main) {
+    std::forward<Sch>(main).schedule();
+    get_event_loop().run_until_complete();
+    return std::forward<Sch>(main).get_result();
 }
 
 ASYNCIO_NS_END

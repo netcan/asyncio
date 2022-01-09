@@ -17,8 +17,7 @@ struct SleepAwaiter: private NonCopyable {
     constexpr void await_resume() const noexcept {}
     template<typename Promise>
     void await_suspend(std::coroutine_handle<Promise> caller) const noexcept {
-        auto& loop = get_event_loop();
-        loop.call_later(delay_, caller.promise());
+        get_event_loop().call_later(delay_, caller.promise());
     }
 
 private:
@@ -26,14 +25,14 @@ private:
 };
 
 template<typename Rep, typename Period>
-auto sleep(NoWaitAtInitialSuspend, std::chrono::duration<Rep, Period> delay /* second */) -> Task<void> {
+Task<> sleep(NoWaitAtInitialSuspend, std::chrono::duration<Rep, Period> delay) {
     co_await detail::SleepAwaiter {delay};
 }
 }
 
 template<typename Rep, typename Period>
 [[nodiscard("discard sleep doesn't make sense")]]
-auto sleep(std::chrono::duration<Rep, Period> delay /* second */) -> Task<void> {
+Task<> sleep(std::chrono::duration<Rep, Period> delay) {
     return detail::sleep(no_wait_at_initial_suspend, delay);
 }
 
