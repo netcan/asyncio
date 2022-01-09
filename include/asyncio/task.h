@@ -25,7 +25,7 @@ struct Task: private NonCopyable {
         return handle_.promise();
     }
 
-    Task() = default;
+    explicit Task(coro_handle h) noexcept: handle_(h) {}
     Task(Task&& t) noexcept
         : handle_(std::exchange(t.handle_, {})) {}
 
@@ -134,7 +134,6 @@ struct Task: private NonCopyable {
         }
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-        // to auto delete by final awaiter
         PromiseState state_ {PromiseState::UNSCHEDULED};
         const bool wait_at_initial_suspend_ {true};
         CoroHandle* continuation_ {};
@@ -143,11 +142,10 @@ struct Task: private NonCopyable {
 
     bool valid() const { return handle_ != nullptr; }
     bool done() const { return handle_.done(); }
-    explicit Task(coro_handle h) noexcept: handle_(h) {}
 private:
     coro_handle handle_;
 };
 
-static_assert(concepts::promise<Task<>::promise_type>);
+static_assert(concepts::Promise<Task<>::promise_type>);
 ASYNCIO_NS_END
 #endif // ASYNCIO_TASK_H

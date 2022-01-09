@@ -12,7 +12,7 @@ ASYNCIO_NS_BEGIN
 namespace concepts {
 template<typename Fut>
 concept Future = concepts::Awaitable<Fut> && requires(Fut fut) {
-    typename std::remove_reference_t<Fut>::promise_type;
+    typename std::remove_cvref_t<Fut>::promise_type;
     fut.get_result();
 };
 };

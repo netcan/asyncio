@@ -7,8 +7,8 @@
 #include <asyncio/concept/future.h>
 ASYNCIO_NS_BEGIN
 namespace concepts {
-template<typename Promise>
-concept promise = requires (Promise p) {
+template<typename P>
+concept Promise = requires (P p) {
     { p.get_return_object() } -> Future;
     { p.initial_suspend() } -> Awaitable;
     { p.final_suspend() } noexcept -> Awaitable;
