@@ -12,14 +12,19 @@
 #include <asyncio/callstack.h>
 using namespace ASYNCIO_NS;
 
-Task<int> factorial(int n) {
-  if (n <= 1) {
-    co_await dump_callstack();
-    co_return 1;
-  }
-  co_return (co_await factorial(n - 1)) * n;
+Task<std::string_view> hello() {
+    co_return "hello";
+}
+
+Task<std::string_view> world() {
+    co_return "world";
+}
+
+Task<std::string> hello_world() {
+    co_return fmt::format("{} {}", co_await hello(), co_await world());
 }
 
 int main() {
-  fmt::print("run result: {}\n", asyncio::run(factorial(5)));
+    fmt::print("run result: {}\n", asyncio::run(hello_world()));
+    return 0;
 }

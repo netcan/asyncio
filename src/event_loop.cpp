@@ -54,7 +54,7 @@ void EventLoop::run_once() {
         schedule_.pop_back();
     }
 
-    for (size_t ntodo = ready_.size(), i = 0; i < ntodo; ++i ) {
+    for (size_t ntodo = ready_.size(), i = 0; i < ntodo; ++i) {
         auto [handle_id, handle] = ready_.front(); ready_.pop();
         if (auto iter = cancelled_.find(handle_id); iter != cancelled_.end()) {
             cancelled_.erase(iter);
