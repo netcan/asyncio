@@ -19,12 +19,12 @@ class EventLoop: private NonCopyable {
     using MSDuration = std::chrono::milliseconds;
 public:
     EventLoop() {
-        auto now = std::chrono::system_clock::now();
+        auto now = std::chrono::steady_clock::now();
         start_time_ = duration_cast<MSDuration>(now.time_since_epoch());
     }
 
     MSDuration time() {
-        auto now = std::chrono::system_clock::now();
+        auto now = std::chrono::steady_clock::now();
         return duration_cast<MSDuration>(now.time_since_epoch()) - start_time_;
     }
 
