@@ -22,15 +22,10 @@ struct Task: private NonCopyable {
     using coro_handle = std::coroutine_handle<promise_type>;
 
     void schedule() const {
-        if (handle_.promise().state_ != PromiseState::PENDING){
-            get_event_loop().call_soon(handle_.promise());
-        }
+        return handle_.promise().schedule();
     }
-
     void cancel() const {
-        if (handle_.promise().state_ == PromiseState::PENDING) {
-            get_event_loop().cancel_handle(handle_.promise());
-        }
+        return handle_.promise().cancel();
     }
 
     explicit Task(coro_handle h) noexcept: handle_(h) {}
@@ -55,10 +50,7 @@ struct Task: private NonCopyable {
             assert(! self_coro_.promise().continuation_);
             self_coro_.promise().continuation_ = &resumer.promise();
 
-            // if not schedule_task
-            if (self_coro_.promise().state_ != PromiseState::PENDING) {
-                get_event_loop().call_soon(self_coro_.promise());
-            }
+            self_coro_.promise().schedule();
         }
         coro_handle self_coro_ {};
     };
@@ -101,8 +93,8 @@ struct Task: private NonCopyable {
             constexpr bool await_ready() const noexcept { return false; }
             template<typename Promise>
             constexpr void await_suspend(std::coroutine_handle<Promise> h) const noexcept {
-                if (h.promise().continuation_) {
-                    get_event_loop().call_soon(*h.promise().continuation_);
+                if (auto cont = h.promise().continuation_) {
+                    cont->schedule();
                 }
             }
             constexpr void await_resume() const noexcept {}
@@ -125,10 +117,9 @@ struct Task: private NonCopyable {
             assert(state_ == PromiseState::PENDING);
             auto handle = coro_handle::from_promise(*this);
             // set to unschedule in advance, because 'resume' may change state
-            state_ = PromiseState::UNSCHEDULED;
+            set_state(PromiseState::UNSCHEDULED);
             handle.resume();
         }
-        void set_state(PromiseState state) final { state_ = state; }
         const std::source_location& get_frame_info() const final { return frame_info_; }
         void dump_backtrace(size_t depth = 0) const final {
             fmt::print("[{}] {}\n", depth, frame_name());
@@ -137,7 +128,6 @@ struct Task: private NonCopyable {
         }
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-        PromiseState state_ {PromiseState::UNSCHEDULED};
         const bool wait_at_initial_suspend_ {true};
         CoroHandle* continuation_ {};
         std::source_location frame_info_{};

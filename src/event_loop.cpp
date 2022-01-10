@@ -70,4 +70,16 @@ const std::source_location& CoroHandle::get_frame_info() const {
     static const std::source_location frame_info = std::source_location::current();
     return frame_info;
 }
+
+void CoroHandle::schedule() {
+    if (state_ != PromiseState::PENDING){
+        get_event_loop().call_soon(*this);
+    }
+}
+
+void CoroHandle::cancel() {
+    if (state_ == PromiseState::PENDING){
+        get_event_loop().cancel_handle(*this);
+    }
+}
 ASYNCIO_NS_END

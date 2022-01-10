@@ -44,8 +44,13 @@ struct CoroHandle: Handle {
                            frame_info.file_name(), frame_info.line());
     }
     virtual void dump_backtrace(size_t depth = 0) const {};
+    void set_state(PromiseState state) final { state_ = state; }
+    void schedule();
+    void cancel();
 private:
     virtual const std::source_location& get_frame_info() const;
+protected:
+    PromiseState state_ {PromiseState::UNSCHEDULED};
 };
 
 ASYNCIO_NS_END
