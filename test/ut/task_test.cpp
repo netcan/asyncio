@@ -232,6 +232,27 @@ SCENARIO("test gather") {
     }
 }
 
+SCENARIO("test sleep") {
+    auto say_after = [](auto delay, std::string_view what) -> Task<> {
+        co_await asyncio::sleep(delay);
+        fmt::print("{}\n", what);
+    };
+
+    auto async_main = [&]() -> Task<> {
+        auto task1 = say_after(100ms, "hello");
+        task1.schedule();
+        auto task2 = say_after(500ms, "world");
+        task2.schedule();
+
+        co_await task1;
+        co_await task2;
+    };
+    auto before_wait = get_event_loop().time();
+    asyncio::run(async_main());
+    auto after_wait = get_event_loop().time();
+    REQUIRE(after_wait - before_wait >= 500ms);
+}
+
 SCENARIO("test timeout") {
     bool is_called = false;
     auto wait_duration = [&](auto duration) -> Task<int> {

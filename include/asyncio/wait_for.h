@@ -23,8 +23,8 @@ struct WaitForAwaiter: NonCopyable {
     template<typename Promise>
     void await_suspend(std::coroutine_handle<Promise> continuation) noexcept {
         continuation_ = &continuation.promise();
-        // set continuation_ to PENDING, don't schedule anymore, until it resume continuation_
-        continuation.promise().set_state(PromiseState::PENDING);
+        // set continuation_ to SUSPEND, don't schedule anymore, until it resume continuation_
+        continuation.promise().set_state(PromiseState::SUSPEND);
     }
 
     ~WaitForAwaiter() {

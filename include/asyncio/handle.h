@@ -12,7 +12,8 @@
 ASYNCIO_NS_BEGIN
 enum class PromiseState: uint8_t {
     UNSCHEDULED,
-    PENDING,
+    SUSPEND,
+    SCHEDULED,
 };
 
 // for cancelled

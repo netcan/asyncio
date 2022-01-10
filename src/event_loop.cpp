@@ -59,6 +59,7 @@ void EventLoop::run_once() {
         if (auto iter = cancelled_.find(handle_id); iter != cancelled_.end()) {
             cancelled_.erase(iter);
         } else {
+            handle->set_state(PromiseState::UNSCHEDULED);
             handle->run();
         }
     }
@@ -72,13 +73,13 @@ const std::source_location& CoroHandle::get_frame_info() const {
 }
 
 void CoroHandle::schedule() {
-    if (state_ != PromiseState::PENDING){
+    if (state_ == PromiseState::UNSCHEDULED){
         get_event_loop().call_soon(*this);
     }
 }
 
 void CoroHandle::cancel() {
-    if (state_ == PromiseState::PENDING){
+    if (state_ == PromiseState::SCHEDULED){
         get_event_loop().cancel_handle(*this);
     }
 }
