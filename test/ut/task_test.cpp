@@ -188,50 +188,50 @@ SCENARIO("test gather") {
         REQUIRE(is_called);
     }
 
-    SECTION("test gather of gather") {
-        REQUIRE(!is_called);
-        asyncio::run([&]() -> Task<> {
-            auto&& [ab, c, _void] = co_await asyncio::gather(
-                    gather(factorial("A", 2),
-                           factorial("B", 3)),
-                    factorial("C", 4),
-                    test_void_func()
-            );
-            auto&& [a, b] = ab;
-            REQUIRE(a == 2);
-            REQUIRE(b == 6);
-            REQUIRE(c == 24);
-            is_called = true;
-        }());
-        REQUIRE(is_called);
-    }
+   SECTION("test gather of gather") {
+       REQUIRE(!is_called);
+       asyncio::run([&]() -> Task<> {
+           auto&& [ab, c, _void] = co_await asyncio::gather(
+                   gather(factorial("A", 2),
+                          factorial("B", 3)),
+                   factorial("C", 4),
+                   test_void_func()
+           );
+           auto&& [a, b] = ab;
+           REQUIRE(a == 2);
+           REQUIRE(b == 6);
+           REQUIRE(c == 24);
+           is_called = true;
+       }());
+       REQUIRE(is_called);
+   }
 
-    SECTION("test detach gather") {
-        REQUIRE(! is_called);
-        auto res = asyncio::gather(
-            factorial("A", 2),
-            factorial("B", 3)
-        );
-        asyncio::run([&]() -> Task<> {
-            auto&& [a, b] = co_await std::move(res);
-            REQUIRE(a == 2);
-            REQUIRE(b == 6);
-            is_called = true;
-        }());
-        REQUIRE(is_called);
-    }
+   SECTION("test detach gather") {
+       REQUIRE(! is_called);
+       auto res = asyncio::gather(
+           factorial("A", 2),
+           factorial("B", 3)
+       );
+       asyncio::run([&]() -> Task<> {
+           auto&& [a, b] = co_await std::move(res);
+           REQUIRE(a == 2);
+           REQUIRE(b == 6);
+           is_called = true;
+       }());
+       REQUIRE(is_called);
+   }
 
-    SECTION("test exception gather") {
-        REQUIRE(!is_called);
-        REQUIRE_THROWS_AS(asyncio::run([&]() -> Task<std::tuple<double, int>> {
-            is_called = true;
-            co_return co_await asyncio::gather(
-                int_div(4, 0),
-                factorial("B", 3)
-            );
-        }()), std::overflow_error);
-        REQUIRE(is_called);
-    }
+   SECTION("test exception gather") {
+       REQUIRE(!is_called);
+       REQUIRE_THROWS_AS(asyncio::run([&]() -> Task<std::tuple<double, int>> {
+           is_called = true;
+           co_return co_await asyncio::gather(
+               int_div(4, 0),
+               factorial("B", 3)
+           );
+       }()), std::overflow_error);
+       REQUIRE(is_called);
+   }
 }
 
 SCENARIO("test sleep") {

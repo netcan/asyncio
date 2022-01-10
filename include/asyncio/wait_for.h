@@ -24,13 +24,11 @@ struct WaitForAwaiter: NonCopyable {
     void await_suspend(std::coroutine_handle<Promise> continuation) noexcept {
         continuation_ = &continuation.promise();
         // set continuation_ to SUSPEND, don't schedule anymore, until it resume continuation_
-        continuation.promise().set_state(PromiseState::SUSPEND);
+        continuation_->set_state(PromiseState::SUSPEND);
     }
 
     ~WaitForAwaiter() {
-        if (continuation_) {
-            continuation_->set_state(PromiseState::UNSCHEDULED);
-        }
+        continuation_->set_state(PromiseState::UNSCHEDULED);
     }
 
     template<concepts::Scheduable Fut>
@@ -56,7 +54,7 @@ private:
 private:
     Result<R> result_;
     Task<> wait_for_task_;
-    Handle* continuation_{};
+    CoroHandle* continuation_{};
 
 private:
     struct TimeoutHandle: Handle {

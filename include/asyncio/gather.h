@@ -30,13 +30,11 @@ public:
     void await_suspend(std::coroutine_handle<Promise> continuation) noexcept {
         continuation_ = &continuation.promise();
         // set continuation_ to SUSPEND, don't schedule anymore, until it resume continuation_
-        continuation.promise().set_state(PromiseState::SUSPEND);
+        continuation_->set_state(PromiseState::SUSPEND);
     }
 
     ~GatherAwaiter() {
-        if (continuation_) {
-            continuation_->set_state(PromiseState::UNSCHEDULED);
-        }
+        continuation_->set_state(PromiseState::UNSCHEDULED);
     }
 
     template<concepts::Awaitable... Futs>
@@ -59,7 +57,7 @@ private:
         } catch(...) {
             result_ = std::current_exception();
         }
-        if (is_finished() && continuation_) {
+        if (is_finished()) {
             get_event_loop().call_soon(*continuation_);
         }
     }
@@ -71,7 +69,7 @@ private:
 private:
     std::variant<ResultTypes, std::exception_ptr> result_;
     std::tuple<Task<std::void_t<Rs>>...> tasks_;
-    Handle* continuation_{};
+    CoroHandle* continuation_{};
     int count_{0};
 };
 
