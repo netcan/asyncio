@@ -19,7 +19,7 @@ void EventLoop::run_until_complete() {
     }
 }
 
-void EventLoop::run_once() {
+void EventLoop::cleanup_delayed_call() {
     // Remove delayed calls that were cancelled from head of queue.
     while (! schedule_.empty()) {
         auto&& [when, handle_info] = schedule_[0];
@@ -31,7 +31,9 @@ void EventLoop::run_once() {
             break;
         }
     }
+}
 
+void EventLoop::run_once() {
     std::optional<MSDuration> timeout;
     if (! ready_.empty()) {
         timeout.emplace(0);
@@ -63,6 +65,8 @@ void EventLoop::run_once() {
             handle->run();
         }
     }
+
+    cleanup_delayed_call();
 }
 
 HandleId Handle::handle_id_generation_ = 0;

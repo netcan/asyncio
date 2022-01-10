@@ -44,6 +44,17 @@ struct Server: NonCopyable {
         }
     }
 
+    Task<void> server_once() {
+        Event ev { .fd = fd_, .events = EPOLLIN };
+        auto& loop = get_event_loop();
+        co_await loop.wait_event(ev);
+        sockaddr_storage remoteaddr{};
+        socklen_t addrlen = sizeof(remoteaddr);
+        int clientfd = ::accept(fd_, reinterpret_cast<sockaddr*>(&remoteaddr), &addrlen);
+        if (clientfd != -1) {
+            co_await connect_cb_(Stream{clientfd, remoteaddr});
+        }
+    }
 private:
     void clean_up_connected(std::list<Task<>>& connected) {
         if (connected.size() < 100) [[likely]] { return; }

@@ -11,6 +11,8 @@
 #include <asyncio/sleep.h>
 #include <asyncio/schedule_task.h>
 #include <asyncio/wait_for.h>
+#include <asyncio/start_server.h>
+#include <asyncio/open_connection.h>
 #include <functional>
 
 using namespace ASYNCIO_NS;
@@ -238,19 +240,41 @@ SCENARIO("test sleep") {
         fmt::print("{}\n", what);
     };
 
-    auto async_main = [&]() -> Task<> {
-        auto task1 = say_after(100ms, "hello");
-        task1.schedule();
-        auto task2 = say_after(500ms, "world");
-        task2.schedule();
+    GIVEN("schedule sleep and await") {
+        auto async_main = [&]() -> Task<> {
+            auto task1 = say_after(100ms, "hello");
+            task1.schedule();
+            auto task2 = say_after(300ms, "world");
+            task2.schedule();
 
-        co_await task1;
-        co_await task2;
-    };
-    auto before_wait = get_event_loop().time();
-    asyncio::run(async_main());
-    auto after_wait = get_event_loop().time();
-    REQUIRE(after_wait - before_wait >= 500ms);
+            co_await task1;
+            co_await task2;
+        };
+        auto before_wait = get_event_loop().time();
+        asyncio::run(async_main());
+        auto after_wait = get_event_loop().time();
+        auto diff = after_wait - before_wait;
+        REQUIRE(diff >= 300ms);
+        REQUIRE(diff < 400ms);
+    }
+
+    GIVEN("schedule sleep and cancel") {
+        auto async_main = [&]() -> Task<> {
+            auto task1 = say_after(100ms, "hello");
+            task1.schedule();
+            auto task2 = say_after(300ms, "world");
+            task2.schedule();
+
+            co_await task1;
+            task2.cancel();
+        };
+        auto before_wait = get_event_loop().time();
+        asyncio::run(async_main());
+        auto after_wait = get_event_loop().time();
+        auto diff = after_wait - before_wait;
+        REQUIRE(diff >= 100ms);
+        REQUIRE(diff < 300ms);
+    }
 }
 
 SCENARIO("test timeout") {
@@ -306,6 +330,43 @@ SCENARIO("test timeout") {
         REQUIRE_THROWS_AS(asyncio::run(wait_for_test(200ms, 100ms)), TimeoutError);
         REQUIRE(! is_called);
     }
+}
+
+SCENARIO("echo server & client") {
+    bool is_called = false;
+    constexpr std::string_view message = "hello world!";
+
+    asyncio::run([&]() -> Task<> {
+        auto handle_echo = [&](Stream stream) -> Task<> {
+            auto& sockinfo = stream.get_sock_info();
+            auto data = co_await stream.read(100);
+            REQUIRE(std::string_view{data.data()} == message);
+            co_await stream.write(data);
+        };
+
+        auto echo_server = [&]() -> Task<> {
+            auto server = co_await asyncio::start_server(
+                    handle_echo, "127.0.0.1", 8888);
+            co_await server.server_once();
+        };
+
+        auto echo_client = [&]() -> Task<> {
+            auto stream = co_await asyncio::open_connection("127.0.0.1", 8888);
+
+            co_await stream.write(Stream::Buffer(message.begin(), message.end()));
+
+            auto data = co_await stream.read(100);
+            REQUIRE(std::string_view{data.data()} == message);
+            is_called = true;
+        };
+
+        auto srv = schedule_task(echo_server());
+        auto cli = schedule_task(echo_client());
+        co_await cli;
+        co_await srv;
+    }());
+
+    REQUIRE(is_called);
 }
 
 SCENARIO("test") {

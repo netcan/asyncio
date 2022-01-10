@@ -74,6 +74,8 @@ private:
         return schedule_.empty() && ready_.empty() && selector_.is_stop();
     }
 
+    void cleanup_delayed_call();
+
     template<typename Rep, typename Period>
     void call_at(std::chrono::duration<Rep, Period> when, Handle& callback) {
         callback.set_state(PromiseState::SCHEDULED);
