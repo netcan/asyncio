@@ -18,6 +18,6 @@ jobs:
         run: |
           mkdir build-debug
           cmake -H. -Bbuild-debug -DCMAKE_BUILD_TYPE=Debug
-          cmake --build build-debug
+          cmake --build build-debug -j
       - name: test
         run: ./build-debug/test/ut/asyncio_ut

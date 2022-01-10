@@ -277,6 +277,23 @@ SCENARIO("test sleep") {
     }
 }
 
+SCENARIO("cancel a infinite loop coroutine") {
+    int count = 0;
+    asyncio::run([&]() -> Task<>{
+        auto inf_loop = [&]() -> Task<> {
+            while (true) {
+                ++count;
+                co_await asyncio::sleep(1ms);
+            }
+        };
+        auto task = schedule_task(inf_loop());
+        co_await asyncio::sleep(10ms);
+        task.cancel();
+    }());
+    REQUIRE(count > 0);
+    REQUIRE(count < 10);
+}
+
 SCENARIO("test timeout") {
     bool is_called = false;
     auto wait_duration = [&](auto duration) -> Task<int> {
