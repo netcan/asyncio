@@ -34,12 +34,12 @@ public:
     }
 
     void cancel_handle(Handle& handle) {
-        handle.set_state(PromiseState::UNSCHEDULED);
+        handle.set_state(Handle::UNSCHEDULED);
         cancelled_.insert(handle.get_handle_id());
     }
 
     void call_soon(Handle& handle) {
-        handle.set_state(PromiseState::SCHEDULED);
+        handle.set_state(Handle::SCHEDULED);
         ready_.push({handle.get_handle_id(), &handle});
     }
 
@@ -47,7 +47,7 @@ public:
         constexpr bool await_ready() const noexcept { return false; }
         template<typename Promise>
         constexpr void await_suspend(std::coroutine_handle<Promise> handle) noexcept {
-            handle.promise().set_state(PromiseState::SUSPEND);
+            handle.promise().set_state(Handle::SUSPEND);
             event_.handle_info = {
                 .id = handle.promise().get_handle_id(),
                 .handle = &handle.promise()
@@ -78,7 +78,7 @@ private:
 
     template<typename Rep, typename Period>
     void call_at(std::chrono::duration<Rep, Period> when, Handle& callback) {
-        callback.set_state(PromiseState::SCHEDULED);
+        callback.set_state(Handle::SCHEDULED);
         schedule_.emplace_back(duration_cast<MSDuration>(when),
                                HandleInfo{callback.get_handle_id(), &callback});
         std::ranges::push_heap(schedule_, std::ranges::greater{}, &TimerHandle::first);

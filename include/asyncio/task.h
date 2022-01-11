@@ -48,7 +48,7 @@ struct Task: private NonCopyable {
         template<typename Promise>
         void await_suspend(std::coroutine_handle<Promise> resumer) const noexcept {
             assert(! self_coro_.promise().continuation_);
-            resumer.promise().set_state(PromiseState::SUSPEND);
+            resumer.promise().set_state(Handle::SUSPEND);
             self_coro_.promise().continuation_ = &resumer.promise();
 
             self_coro_.promise().schedule();
@@ -96,7 +96,7 @@ struct Task: private NonCopyable {
             constexpr void await_suspend(std::coroutine_handle<Promise> h) const noexcept {
                 if (auto cont = h.promise().continuation_) {
                     // SUSPEND -> UNSCHEDULED -> SCHEDULED
-                    cont->set_state(PromiseState::UNSCHEDULED);
+                    cont->set_state(Handle::UNSCHEDULED);
                     cont->schedule();
                 }
             }
