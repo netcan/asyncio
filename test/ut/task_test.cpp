@@ -235,16 +235,18 @@ SCENARIO("test gather") {
 }
 
 SCENARIO("test sleep") {
-    auto say_after = [](auto delay, std::string_view what) -> Task<> {
+    size_t call_time = 0;
+    auto say_after = [&](auto delay, std::string_view what) -> Task<> {
         co_await asyncio::sleep(delay);
         fmt::print("{}\n", what);
+        ++call_time;
     };
 
     GIVEN("schedule sleep and await") {
         auto async_main = [&]() -> Task<> {
             auto task1 = say_after(100ms, "hello");
             task1.schedule();
-            auto task2 = say_after(300ms, "world");
+            auto task2 = say_after(200ms, "world");
             task2.schedule();
 
             co_await task1;
@@ -254,15 +256,16 @@ SCENARIO("test sleep") {
         asyncio::run(async_main());
         auto after_wait = get_event_loop().time();
         auto diff = after_wait - before_wait;
-        REQUIRE(diff >= 300ms);
-        REQUIRE(diff < 400ms);
+        REQUIRE(diff >= 200ms);
+        REQUIRE(diff < 300ms);
+        REQUIRE(call_time == 2);
     }
 
     GIVEN("schedule sleep and cancel") {
         auto async_main = [&]() -> Task<> {
             auto task1 = say_after(100ms, "hello");
             task1.schedule();
-            auto task2 = say_after(300ms, "world");
+            auto task2 = say_after(200ms, "world");
             task2.schedule();
 
             co_await task1;
@@ -273,7 +276,29 @@ SCENARIO("test sleep") {
         auto after_wait = get_event_loop().time();
         auto diff = after_wait - before_wait;
         REQUIRE(diff >= 100ms);
-        REQUIRE(diff < 300ms);
+        REQUIRE(diff < 200ms);
+        REQUIRE(call_time == 1);
+    }
+
+    GIVEN("schedule sleep and cancel, delay exit") {
+        auto async_main = [&]() -> Task<> {
+            auto task1 = say_after(100ms, "hello");
+            task1.schedule();
+            auto task2 = say_after(200ms, "world");
+            task2.schedule();
+
+            co_await task1;
+            task2.cancel();
+            // delay 300ms to exit
+            co_await asyncio::sleep(200ms);
+        };
+        auto before_wait = get_event_loop().time();
+        asyncio::run(async_main());
+        auto after_wait = get_event_loop().time();
+        auto diff = after_wait - before_wait;
+        REQUIRE(diff >= 300ms);
+        REQUIRE(diff < 400ms);
+        REQUIRE(call_time == 1);
     }
 }
 

@@ -83,7 +83,7 @@ void CoroHandle::schedule() {
 }
 
 void CoroHandle::cancel() {
-    if (state_ == PromiseState::SCHEDULED){
+    if (state_ != PromiseState::UNSCHEDULED){
         get_event_loop().cancel_handle(*this);
     }
 }
