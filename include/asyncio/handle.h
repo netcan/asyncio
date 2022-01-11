@@ -22,12 +22,14 @@ struct Handle { // type erase for EventLoop
 
     Handle() noexcept: handle_id_(handle_id_generation_++) {}
     virtual void run() = 0;
-    virtual void set_state(State state) {}
+    void set_state(State state) { state_ = state; }
     HandleId get_handle_id() { return handle_id_; }
     virtual ~Handle() = default;
 private:
     HandleId handle_id_;
     static HandleId handle_id_generation_;
+protected:
+    State state_ {Handle::UNSCHEDULED};
 };
 
 // handle maybe destroyed, using the increasing id to track the lifetime of handle.
@@ -45,13 +47,10 @@ struct CoroHandle: Handle {
                            frame_info.file_name(), frame_info.line());
     }
     virtual void dump_backtrace(size_t depth = 0) const {};
-    void set_state(State state) final { state_ = state; }
     void schedule();
     void cancel();
 private:
     virtual const std::source_location& get_frame_info() const;
-protected:
-    State state_ {Handle::UNSCHEDULED};
 };
 
 ASYNCIO_NS_END
