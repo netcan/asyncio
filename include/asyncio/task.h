@@ -21,12 +21,8 @@ struct Task: private NonCopyable {
     struct promise_type;
     using coro_handle = std::coroutine_handle<promise_type>;
 
-    void schedule() const {
-        return handle_.promise().schedule();
-    }
-    void cancel() const {
-        return handle_.promise().cancel();
-    }
+    template<concepts::Future>
+    friend struct ScheduledTask;
 
     explicit Task(coro_handle h) noexcept: handle_(h) {}
     Task(Task&& t) noexcept
@@ -34,8 +30,9 @@ struct Task: private NonCopyable {
 
     ~Task() {
         if (handle_) {
-            cancel();
+            handle_.promise().cancel();
             handle_.destroy();
+            handle_ = nullptr;
         }
     }
 

@@ -31,7 +31,7 @@ struct Server: NonCopyable {
     Task<void> serve_forever() {
         Event ev { .fd = fd_, .events = EPOLLIN };
         auto& loop = get_event_loop();
-        std::list<Task<>> connected;
+        std::list<ScheduledTask<Task<>>> connected;
         while (true) {
             co_await loop.wait_event(ev);
             sockaddr_storage remoteaddr{};
@@ -56,7 +56,7 @@ struct Server: NonCopyable {
         }
     }
 private:
-    void clean_up_connected(std::list<Task<>>& connected) {
+    void clean_up_connected(std::list<ScheduledTask<Task<>>>& connected) {
         if (connected.size() < 100) [[likely]] { return; }
         for (auto iter = connected.begin(); iter != connected.end(); ) {
             if (iter->done()) {

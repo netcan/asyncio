@@ -9,6 +9,7 @@
 #include <asyncio/concept/awaitable.h>
 #include <asyncio/event_loop.h>
 #include <asyncio/exception.h>
+#include <asyncio/schedule_task.h>
 #include <asyncio/result.h>
 #include <chrono>
 ASYNCIO_NS_BEGIN
@@ -31,10 +32,10 @@ struct WaitForAwaiter: NonCopyable {
         continuation_->set_state(Handle::UNSCHEDULED);
     }
 
-    template<concepts::Scheduable Fut>
+    template<concepts::Future Fut>
     WaitForAwaiter(Fut& fut, Duration timeout)
-            : wait_for_task_ {wait_for_task(no_wait_at_initial_suspend, fut)}
-            , timeout_handle_(*this, timeout, [&fut] { fut.cancel(); })
+            : timeout_handle_(*this, timeout)
+            , wait_for_task_ {schedule_task(wait_for_task(no_wait_at_initial_suspend, fut))}
             { }
 
 private:
@@ -53,27 +54,25 @@ private:
 
 private:
     Result<R> result_;
-    Task<> wait_for_task_;
     CoroHandle* continuation_{};
 
 private:
     struct TimeoutHandle: Handle {
-        TimeoutHandle(WaitForAwaiter& awaiter, Duration timeout,
-                std::function<void()> cancel_cb)
-        : awaiter_(awaiter), cancel_current_task_(cancel_cb) {
+        TimeoutHandle(WaitForAwaiter& awaiter, Duration timeout)
+        : awaiter_(awaiter) {
             EventLoop& loop{get_event_loop()};
             loop.call_later(timeout, *this);
         }
         void run() final { // timeout!
-            cancel_current_task_();
+            awaiter_.wait_for_task_.cancel();
             awaiter_.result_.set_exception(std::make_exception_ptr(TimeoutError{}));
-            EventLoop& loop{get_event_loop()};
-            loop.call_soon(*awaiter_.continuation_);
+
+            get_event_loop().call_soon(*awaiter_.continuation_);
         }
 
         WaitForAwaiter& awaiter_;
-        std::function<void()> cancel_current_task_;
     } timeout_handle_;
+    ScheduledTask<Task<>> wait_for_task_;
 };
 
 template<concepts::Awaitable Fut, typename Duration>

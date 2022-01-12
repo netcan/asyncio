@@ -126,30 +126,37 @@ SCENARIO("test Task for loop") {
 
 
 SCENARIO("test schedule_task") {
-    std::vector<int> result;
-    auto f = [&]() -> Task<> {
-        result.push_back(0xabab);
-        co_return;
+    bool called{false};
+    auto f = [&]() -> Task<int> {
+        called = true;
+        co_return 0xababcaab;
     };
 
     GIVEN("run and detach created task") {
-        auto test = [&]() -> Task<> {
+        asyncio::run([&]() -> Task<> {
             auto handle = asyncio::schedule_task(f());
             co_return;
-        };
-        asyncio::run(test());
-        REQUIRE(result.empty());
+        }());
+        REQUIRE(! called);
     }
 
     GIVEN("run and await created task") {
-        auto test = [&]() -> Task<> {
+        asyncio::run([&]() -> Task<> {
             auto handle = asyncio::schedule_task(f());
-            co_await handle;
-        };
-        asyncio::run(test());
-        REQUIRE(result.size() == 1);
-        REQUIRE(result[0] == 0xabab);
+            REQUIRE(co_await handle == 0xababcaab);
+            REQUIRE(co_await handle == 0xababcaab);
+        }());
+        REQUIRE(called);
     }
+
+    GIVEN("cancel and await created task") {
+        asyncio::run([&]() -> Task<> {
+            auto handle = asyncio::schedule_task(f());
+            handle.cancel();
+            REQUIRE_THROWS_AS(co_await handle, InvalidFuture);
+        }());
+    }
+
 }
 
 auto int_div(int a, int b) -> Task<double> {
@@ -260,10 +267,8 @@ SCENARIO("test sleep") {
 
     GIVEN("schedule sleep and await") {
         auto async_main = [&]() -> Task<> {
-            auto task1 = say_after(100ms, "hello");
-            task1.schedule();
-            auto task2 = say_after(200ms, "world");
-            task2.schedule();
+            auto task1 = schedule_task(say_after(100ms, "hello"));
+            auto task2 = schedule_task(say_after(200ms, "world"));
 
             co_await task1;
             co_await task2;
@@ -279,10 +284,8 @@ SCENARIO("test sleep") {
 
     GIVEN("schedule sleep and cancel") {
         auto async_main = [&]() -> Task<> {
-            auto task1 = say_after(100ms, "hello");
-            task1.schedule();
-            auto task2 = say_after(200ms, "world");
-            task2.schedule();
+            auto task1 = schedule_task(say_after(100ms, "hello"));
+            auto task2 = schedule_task(say_after(200ms, "world"));
 
             co_await task1;
             task2.cancel();
@@ -298,10 +301,8 @@ SCENARIO("test sleep") {
 
     GIVEN("schedule sleep and cancel, delay exit") {
         auto async_main = [&]() -> Task<> {
-            auto task1 = say_after(100ms, "hello");
-            task1.schedule();
-            auto task2 = say_after(200ms, "world");
-            task2.schedule();
+            auto task1 = schedule_task(say_after(100ms, "hello"));
+            auto task2 = schedule_task(say_after(200ms, "world"));
 
             co_await task1;
             task2.cancel();
