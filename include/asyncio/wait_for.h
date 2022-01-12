@@ -33,17 +33,19 @@ struct WaitForAwaiter: NonCopyable {
     }
 
     template<concepts::Future Fut>
-    WaitForAwaiter(Fut& fut, Duration timeout)
+    WaitForAwaiter(Fut&& fut, Duration timeout)
             : timeout_handle_(*this, timeout)
-            , wait_for_task_ {schedule_task(wait_for_task(no_wait_at_initial_suspend, fut))}
-            { }
+            , wait_for_task_ {
+                schedule_task(wait_for_task(no_wait_at_initial_suspend,
+                             std::forward<Fut>(fut)))
+            } { }
 
 private:
     template<concepts::Awaitable Fut>
-    Task<> wait_for_task(NoWaitAtInitialSuspend, Fut& fut) {
+    Task<> wait_for_task(NoWaitAtInitialSuspend, Fut&& fut) {
         try {
-            if constexpr (std::is_void_v<R>) { co_await fut; }
-            else { result_.set_value(co_await fut); }
+            if constexpr (std::is_void_v<R>) { co_await std::forward<Fut>(fut); }
+            else { result_.set_value(co_await std::forward<Fut>(fut)); }
         } catch(...) {
             result_.unhandled_exception();
         }
@@ -84,7 +86,7 @@ struct WaitForAwaiterRegistry {
     : fut_(std::forward<Fut>(fut)), duration_(duration) { }
 
     auto operator co_await () && {
-        return WaitForAwaiter{fut_, duration_};
+        return WaitForAwaiter{std::forward<Fut>(fut_), duration_};
     }
 private:
     Fut fut_; // lift Future's lifetime

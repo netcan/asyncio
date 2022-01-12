@@ -33,10 +33,6 @@ public:
         continuation_->set_state(Handle::SUSPEND);
     }
 
-    ~GatherAwaiter() {
-        continuation_->set_state(Handle::UNSCHEDULED);
-    }
-
     template<concepts::Awaitable... Futs>
     explicit GatherAwaiter(Futs&&... futs)
     : GatherAwaiter( std::make_index_sequence<sizeof...(Futs)>{}

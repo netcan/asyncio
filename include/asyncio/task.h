@@ -104,9 +104,7 @@ struct Task: private NonCopyable {
             template<typename Promise>
             constexpr void await_suspend(std::coroutine_handle<Promise> h) const noexcept {
                 if (auto cont = h.promise().continuation_) {
-                    // SUSPEND -> UNSCHEDULED -> SCHEDULED
-                    cont->set_state(Handle::UNSCHEDULED);
-                    cont->schedule();
+                    get_event_loop().call_soon(*cont);
                 }
             }
             constexpr void await_resume() const noexcept {}
