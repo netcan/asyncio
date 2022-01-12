@@ -19,5 +19,11 @@ struct NoResultError: std::exception {
     }
 };
 
+struct InvalidFuture: std::exception {
+    [[nodiscard]] const char* what() const noexcept override {
+        return "future is invalid";
+    }
+};
+
 ASYNCIO_NS_END
 #endif // ASYNCIO_EXCEPTION_H

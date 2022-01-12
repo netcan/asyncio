@@ -61,10 +61,29 @@ SCENARIO("test Task await") {
     }
 }
 
-
 Task<int64_t> square(int64_t x) {
     co_return x * x;
 }
+
+SCENARIO("Task<> test") {
+    GIVEN("co_await empty task<>") {
+        bool called {false};
+        try {
+            asyncio::run([&]() -> Task<> {
+                auto t = square(5);
+                auto tt = std::move(t);
+                REQUIRE(! t.valid());
+                REQUIRE(tt.valid());
+                co_await t;
+            }());
+        } catch(InvalidFuture& ) {
+            called = true;
+        }
+
+        REQUIRE(called);
+    }
+}
+
 
 SCENARIO("test Task await result value") {
     GIVEN("square_sum 3, 4") {
