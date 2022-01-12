@@ -28,13 +28,7 @@ struct Task: private NonCopyable {
     Task(Task&& t) noexcept
         : handle_(std::exchange(t.handle_, {})) {}
 
-    ~Task() {
-        if (handle_) {
-            handle_.promise().cancel();
-            handle_.destroy();
-            handle_ = nullptr;
-        }
-    }
+    ~Task() { destroy(); }
 
     decltype(auto) get_result() & {
         return handle_.promise().result();
@@ -141,6 +135,14 @@ struct Task: private NonCopyable {
 
     bool valid() const { return handle_ != nullptr; }
     bool done() const { return handle_.done(); }
+private:
+    void destroy() {
+        if (handle_) {
+            handle_.promise().cancel();
+            handle_.destroy();
+            handle_ = nullptr;
+        }
+    }
 private:
     coro_handle handle_;
 };

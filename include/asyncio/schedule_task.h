@@ -18,7 +18,7 @@ struct ScheduledTask: private NonCopyable {
         }
     }
 
-    void cancel() { task_.~Task(); }
+    void cancel() { task_.destroy(); }
 
     decltype(auto) operator co_await() const & noexcept {
         return task_.operator co_await();

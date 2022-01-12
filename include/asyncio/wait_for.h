@@ -28,10 +28,6 @@ struct WaitForAwaiter: NonCopyable {
         continuation_->set_state(Handle::SUSPEND);
     }
 
-    ~WaitForAwaiter() {
-        continuation_->set_state(Handle::UNSCHEDULED);
-    }
-
     template<concepts::Future Fut>
     WaitForAwaiter(Fut&& fut, Duration timeout)
             : timeout_handle_(*this, timeout)

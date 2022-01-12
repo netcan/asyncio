@@ -9,3 +9,4 @@ compile_commands.json
 /*.data
 /result
 *.log
+.gdb_history
