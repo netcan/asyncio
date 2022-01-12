@@ -68,17 +68,14 @@ Task<int64_t> square(int64_t x) {
 SCENARIO("Task<> test") {
     GIVEN("co_await empty task<>") {
         bool called {false};
-        try {
-            asyncio::run([&]() -> Task<> {
-                auto t = square(5);
-                auto tt = std::move(t);
-                REQUIRE(! t.valid());
-                REQUIRE(tt.valid());
-                co_await t;
-            }());
-        } catch(InvalidFuture& ) {
+        asyncio::run([&]() -> Task<> {
+            auto t = square(5);
+            auto tt = std::move(t);
+            REQUIRE(! t.valid());
+            REQUIRE(tt.valid());
+            REQUIRE_THROWS_AS(co_await t, InvalidFuture);
             called = true;
-        }
+        }());
 
         REQUIRE(called);
     }

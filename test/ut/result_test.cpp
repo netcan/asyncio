@@ -120,7 +120,69 @@ SCENARIO("test result T") {
         REQUIRE(TestCounted::alive_counts() == 1);
     }
 
+}
 
+SCENARIO("test Counted for Task") {
+    using TestCounted = Counted<default_counted_policy>;
+    TestCounted::reset_count();
+
+    auto build_count = []() -> Task<TestCounted> {
+        co_return TestCounted{};
+    };
+    bool called{false};
+
+    GIVEN("return a counted") {
+        asyncio::run([&]() -> Task<> {
+            auto c = co_await build_count();
+            REQUIRE(TestCounted::alive_counts() == 1);
+            REQUIRE(TestCounted::move_construct_counts == 2);
+            REQUIRE(TestCounted::default_construct_counts == 1);
+            REQUIRE(TestCounted::copy_construct_counts == 0);
+            called = true;
+        }());
+        REQUIRE(called);
+    }
+
+    GIVEN("return a lvalue counted") {
+        asyncio::run([&]() -> Task<> {
+            auto t = build_count();
+            {
+                auto c = co_await t;
+                REQUIRE(TestCounted::alive_counts() == 2);
+                REQUIRE(TestCounted::move_construct_counts == 1);
+                REQUIRE(TestCounted::default_construct_counts == 1);
+                REQUIRE(TestCounted::copy_construct_counts == 1);
+            }
+
+            {
+                auto c = co_await std::move(t);
+                REQUIRE(TestCounted::alive_counts() == 2);
+                REQUIRE(TestCounted::move_construct_counts == 2);
+                REQUIRE(TestCounted::default_construct_counts == 1);
+                REQUIRE(TestCounted::copy_construct_counts == 1);
+            }
+
+            called = true;
+        }());
+        REQUIRE(called);
+    }
+
+    GIVEN("rvalue task: get_result") {
+        auto c = asyncio::run(build_count());
+        REQUIRE(TestCounted::alive_counts() == 1);
+        REQUIRE(TestCounted::move_construct_counts == 2);
+        REQUIRE(TestCounted::default_construct_counts == 1);
+        REQUIRE(TestCounted::copy_construct_counts == 0);
+    }
+
+    GIVEN("lvalue task: get_result") {
+        auto t = build_count();
+        auto c = asyncio::run(t);
+        REQUIRE(TestCounted::alive_counts() == 2);
+        REQUIRE(TestCounted::move_construct_counts == 1);
+        REQUIRE(TestCounted::default_construct_counts == 1);
+        REQUIRE(TestCounted::copy_construct_counts == 1);
+    }
 }
 
 

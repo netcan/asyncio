@@ -39,8 +39,12 @@ struct Task: private NonCopyable {
         }
     }
 
-    decltype(auto) get_result() {
+    decltype(auto) get_result() & {
         return handle_.promise().result();
+    }
+
+    decltype(auto) get_result() && {
+        return std::move(handle_.promise()).result();
     }
 
     struct AwaiterBase {
