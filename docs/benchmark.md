@@ -419,7 +419,7 @@ asyncio.run(main())
 ```cpp
 Task<> handle_echo(Stream stream) {
     while (true) {
-        auto data = (co_await stream.read(200));
+        auto data = co_await stream.read(200);
         if (data.empty()) { break; }
         co_await stream.write(data);
     }
@@ -427,7 +427,7 @@ Task<> handle_echo(Stream stream) {
     stream.close();
 }
 
-Task<void> amain() {
+Task<> echo_server() {
     auto server = co_await asyncio::start_server(
             handle_echo, "127.0.0.1", 8888);
 
@@ -437,7 +437,7 @@ Task<void> amain() {
 }
 
 int main() {
-    asyncio::run(amain());
+    asyncio::run(echo_server());
     return 0;
 }
 ```

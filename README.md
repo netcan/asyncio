@@ -135,7 +135,7 @@ Task<> handle_echo(Stream stream) {
     stream.close(); // unneeded, just imitate python
 }
 
-Task<void> amain() {
+Task<> echo_server() {
     auto server = co_await asyncio::start_server(
             handle_echo, "127.0.0.1", 8888);
 
@@ -145,7 +145,7 @@ Task<void> amain() {
 }
 
 int main() {
-    asyncio::run(amain());
+    asyncio::run(echo_server());
     return 0;
 }
 ```
