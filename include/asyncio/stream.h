@@ -36,8 +36,7 @@ struct Stream: NonCopyable {
 
         Buffer result(sz, 0);
         Event ev { .fd = fd_, .events = EPOLLIN };
-        auto& loop = get_event_loop();
-        co_await loop.wait_event(ev);
+        co_await get_event_loop().wait_event(ev);
         sz = ::read(fd_, result.data(), result.size());
         if (sz == -1) {
             throw std::system_error(std::make_error_code(static_cast<std::errc>(errno)));

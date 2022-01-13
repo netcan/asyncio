@@ -66,7 +66,7 @@ public:
 
     [[nodiscard]]
     auto wait_event(const Event& event) {
-        return WaitEventAwaiter(selector_, event);
+        return WaitEventAwaiter{selector_, event};
     }
 
     void run_until_complete();
