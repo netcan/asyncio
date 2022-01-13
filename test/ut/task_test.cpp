@@ -389,6 +389,13 @@ SCENARIO("test timeout") {
         REQUIRE_THROWS_AS(asyncio::run(wait_for_test(200ms, 100ms)), TimeoutError);
         REQUIRE(! is_called);
     }
+
+    SECTION("wait for awaitable") {
+        asyncio::run([]() -> Task<> {
+            co_await wait_for(std::suspend_always{}, 1s);
+            co_await wait_for(std::suspend_never{}, 1s);
+        }());
+    }
 }
 
 SCENARIO("echo server & client") {

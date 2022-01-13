@@ -28,7 +28,7 @@ struct WaitForAwaiter: NonCopyable {
         continuation_->set_state(Handle::SUSPEND);
     }
 
-    template<concepts::Future Fut>
+    template<concepts::Awaitable Fut>
     WaitForAwaiter(Fut&& fut, Duration timeout)
             : timeout_handle_(*this, timeout)
             , wait_for_task_ {
@@ -47,7 +47,9 @@ private:
         }
         EventLoop& loop{get_event_loop()};
         loop.cancel_handle(timeout_handle_);
-        loop.call_soon(*continuation_);
+        if (continuation_) {
+            loop.call_soon(*continuation_);
+        }
     }
 
 private:
@@ -58,8 +60,7 @@ private:
     struct TimeoutHandle: Handle {
         TimeoutHandle(WaitForAwaiter& awaiter, Duration timeout)
         : awaiter_(awaiter) {
-            EventLoop& loop{get_event_loop()};
-            loop.call_later(timeout, *this);
+            get_event_loop().call_later(timeout, *this);
         }
         void run() final { // timeout!
             awaiter_.wait_for_task_.cancel();
@@ -85,13 +86,12 @@ struct WaitForAwaiterRegistry {
         return WaitForAwaiter{std::forward<Fut>(fut_), duration_};
     }
 private:
-    Fut fut_; // lift Future's lifetime
+    Fut fut_; // lift Awaitable's lifetime
     Duration duration_;
 };
 
 template<concepts::Awaitable Fut, typename Duration>
-WaitForAwaiterRegistry(Fut&& fut, Duration duration)
--> WaitForAwaiterRegistry<Fut, Duration>;
+WaitForAwaiterRegistry(Fut&&, Duration) -> WaitForAwaiterRegistry<Fut, Duration>;
 
 template<concepts::Awaitable Fut, typename Rep, typename Period>
 auto wait_for(NoWaitAtInitialSuspend, Fut&& fut, std::chrono::duration<Rep, Period> timeout)
@@ -102,7 +102,7 @@ auto wait_for(NoWaitAtInitialSuspend, Fut&& fut, std::chrono::duration<Rep, Peri
 
 template<concepts::Awaitable Fut, typename Rep, typename Period>
 [[nodiscard("discard wait_for doesn't make sense")]]
-auto wait_for(Fut&& fut, std::chrono::duration<Rep, Period> timeout) {
+Task<AwaitResult<Fut>> wait_for(Fut&& fut, std::chrono::duration<Rep, Period> timeout) {
     return detail::wait_for(no_wait_at_initial_suspend, std::forward<Fut>(fut), timeout);
 }
 ASYNCIO_NS_END
