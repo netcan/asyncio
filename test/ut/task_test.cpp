@@ -406,7 +406,7 @@ SCENARIO("echo server & client") {
         auto echo_server = [&]() -> Task<> {
             auto server = co_await asyncio::start_server(
                     handle_echo, "127.0.0.1", 8888);
-            co_await server.server_once();
+            co_await server.serve_forever();
         };
 
         auto echo_client = [&]() -> Task<> {
@@ -420,9 +420,8 @@ SCENARIO("echo server & client") {
         };
 
         auto srv = schedule_task(echo_server());
-        auto cli = schedule_task(echo_client());
-        co_await cli;
-        co_await srv;
+        co_await echo_client();
+        srv.cancel();
     }());
 
     REQUIRE(is_called);

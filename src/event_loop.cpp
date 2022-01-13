@@ -14,9 +14,7 @@ EventLoop& get_event_loop() {
 }
 
 void EventLoop::run_until_complete() {
-    while (! is_stop()) {
-        run_once();
-    }
+    while (! is_stop()) { run_once(); }
 }
 
 void EventLoop::cleanup_delayed_call() {

@@ -137,10 +137,9 @@ struct Task: private NonCopyable {
     bool done() const { return handle_.done(); }
 private:
     void destroy() {
-        if (handle_) {
-            handle_.promise().cancel();
-            handle_.destroy();
-            handle_ = nullptr;
+        if (auto handle = std::exchange(handle_, nullptr)) {
+            handle.promise().cancel();
+            handle.destroy();
         }
     }
 private:

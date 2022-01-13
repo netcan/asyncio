@@ -54,7 +54,9 @@ public:
             };
             selector_.register_event(event_);
         }
-        void await_resume() noexcept {
+        void await_resume() noexcept { }
+
+        ~WaitEventAwaiter() {
             selector_.remove_event(event_);
         }
 
