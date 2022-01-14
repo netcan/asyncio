@@ -8,6 +8,8 @@
       * [Server](#server)
       * [Benchmark](#benchmark)
    * [Gather](#gather)
+   * [WaitFor](#waitfor)
+   * [ScheduledTask &amp; Cancel](#scheduledtask--cancel)
    * [Tested Compiler](#tested-compiler)
    * [TODO](#todo)
    * [FAQ](#faq)
@@ -21,7 +23,7 @@
       * [Will the buffer size of the benchmark code impact on performance?](#will-the-buffer-size-of-the-benchmark-code-impact-on-performance)
    * [Reference](#reference)
 
-<!-- Added by: netcan, at: Wed Dec  8 10:08:59 PM HKT 2021 -->
+<!-- Added by: netcan, at: Fri Jan 14 09:39:28 PM HKT 2022 -->
 
 <!--te-->
 
@@ -220,6 +222,44 @@ Task B: Compute factorial(3), currently i=3...
 Task B: factorial(3) = 6
 Task C: Compute factorial(4), currently i=4...
 Task C: factorial(4) = 24
+```
+
+## WaitFor
+```cpp
+asyncio::run([&]() -> Task<> {
+    REQUIRE_NOTHROW(co_await wait_for(gather(sleep(10ms), sleep(20ms), sleep(30ms)), 50ms));
+    REQUIRE_THROWS_AS(co_await wait_for(gather(sleep(10ms), sleep(80ms), sleep(30ms)), 50ms),
+                        TimeoutError);
+}());
+````
+
+## ScheduledTask & Cancel
+```cpp
+auto say_after = [&](auto delay, std::string_view what) -> Task<> {
+    co_await asyncio::sleep(delay);
+    fmt::print("{}\n", what);
+};
+
+GIVEN("schedule sleep and cancel") {
+    auto async_main = [&]() -> Task<> {
+        auto task1 = schedule_task(say_after(100ms, "hello"));
+        auto task2 = schedule_task(say_after(200ms, "world"));
+
+        co_await task1;
+        task2.cancel();
+    };
+    auto before_wait = get_event_loop().time();
+    asyncio::run(async_main());
+    auto after_wait = get_event_loop().time();
+    auto diff = after_wait - before_wait;
+    REQUIRE(diff >= 100ms);
+    REQUIRE(diff < 200ms);
+}
+```
+
+output:
+```shell
+hello
 ```
 
 ## Tested Compiler
