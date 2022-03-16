@@ -357,3 +357,6 @@ Source:
 ## Reference
 - https://github.com/lewissbaker/cppcoro
 - https://docs.python.org/3/library/asyncio.html
+
+---
+Thanks to [JetBrains](https://www.jetbrains.com/?from=asyncio) for donating product licenses to help develop **asyncio** <a href="https://www.jetbrains.com/?from=asyncio"><img src="https://resources.jetbrains.com/storage/products/company/brand/logos/jb_beam.svg" width="94" align="center" /></a>
