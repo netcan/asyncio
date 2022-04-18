@@ -18,7 +18,7 @@ template<typename R, typename Duration>
 struct WaitForAwaiter: NonCopyable {
     constexpr bool await_ready() noexcept { return result_.has_value(); }
     constexpr decltype(auto) await_resume() {
-        return result_.result();
+        return std::move(result_).result();
     }
 
     template<typename Promise>
