@@ -59,7 +59,8 @@ struct Stream: NonCopyable {
         auto& loop = get_event_loop();
         ssize_t total_write = 0;
         while (total_write < buf.size()) {
-            co_await write_awaiter_;
+            // FIXME: how to handle write event?
+            // co_await write_awaiter_;
             ssize_t sz = ::write(write_fd_, buf.data() + total_write, buf.size() - total_write);
             if (sz == -1) {
                 throw std::system_error(std::make_error_code(static_cast<std::errc>(errno)));

@@ -81,8 +81,8 @@ void CoroHandle::schedule() {
 }
 
 void CoroHandle::cancel() {
-    // if (state_ == Handle::SCHEDULED){
+    if (state_ != Handle::UNSCHEDULED){
         get_event_loop().cancel_handle(*this);
-    // }
+    }
 }
 ASYNCIO_NS_END
