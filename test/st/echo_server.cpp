@@ -1,34 +1,43 @@
-//
-// Created by netcan on 2021/11/30.
-//
-
+#include <asyncio/stream.h>
+#include <arpa/inet.h>
 #include <asyncio/runner.h>
 #include <asyncio/start_server.h>
-#include <arpa/inet.h>
+#include <asyncio/task.h>
+#include <fmt/core.h>
 
-using asyncio::Task;
 using asyncio::Stream;
-using asyncio::get_in_addr;
+using asyncio::Task;
 using asyncio::get_in_port;
+using asyncio::get_in_addr;
+
+int add_count = 0;
+int rel_count = 0;
 
 Task<> handle_echo(Stream stream) {
-    auto& sockinfo = stream.get_sock_info();
-    auto sa = reinterpret_cast<const sockaddr*>(&sockinfo);
+    auto sockinfo = stream.get_sock_info();
     char addr[INET6_ADDRSTRLEN] {};
+    auto sa = reinterpret_cast<const sockaddr*>(&sockinfo);
 
-    auto data = co_await stream.read(100);
-    fmt::print("Received: '{}' from '{}:{}'\n", data.data(),
-               inet_ntop(sockinfo.ss_family, get_in_addr(sa), addr, sizeof addr),
-               get_in_port(sa));
-
-    fmt::print("Send: '{}'\n", data.data());
-    co_await stream.write(data);
-
-    fmt::print("Close the connection\n");
+    ++add_count;
+    // fmt::print("connections: {}/{}\n", rel_count, add_count);
+    while (true) {
+        try {
+            auto data = co_await stream.read(200);
+            if (data.empty()) { break; }
+            // fmt::print("Received: '{}' from '{}:{}'\n", data.data(),
+                    // inet_ntop(sockinfo.ss_family, get_in_addr(sa), addr, sizeof addr),
+                    // get_in_port(sa));
+            co_await stream.write(data);
+        } catch (...) {
+            break;
+        }
+    }
+    ++rel_count;
+    // fmt::print("connections: {}/{}\n", rel_count, add_count);
     stream.close();
 }
 
-Task<void> amain() {
+Task<> echo_server() {
     auto server = co_await asyncio::start_server(
             handle_echo, "127.0.0.1", 8888);
 
@@ -38,6 +47,6 @@ Task<void> amain() {
 }
 
 int main() {
-    asyncio::run(amain());
+    asyncio::run(echo_server());
     return 0;
 }

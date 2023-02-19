@@ -4,12 +4,12 @@
 
 #ifndef ASYNCIO_EPOLL_SELECTOR_H
 #define ASYNCIO_EPOLL_SELECTOR_H
+#include "fmt/core.h"
 #include <asyncio/asyncio_ns.h>
 #include <asyncio/selector/event.h>
 #include <unistd.h>
 #include <sys/epoll.h>
 #include <vector>
-#include <fmt/core.h>
 ASYNCIO_NS_BEGIN
 struct EpollSelector {
     EpollSelector(): epfd_(epoll_create1(0)) {
@@ -25,9 +25,15 @@ struct EpollSelector {
         int ndfs = epoll_wait(epfd_, events.data(), register_event_count_, timeout);
         std::vector<Event> result;
         for (size_t i = 0; i < ndfs; ++i) {
-            result.emplace_back(Event {
-                .handle_info = *reinterpret_cast<HandleInfo*>(events[i].data.ptr)
-            });
+            auto handle_info = reinterpret_cast<HandleInfo*>(events[i].data.ptr);
+            if (handle_info->handle != nullptr && handle_info->handle != (Handle*)&handle_info->handle) {
+                result.emplace_back(Event {
+                    .handle_info = *handle_info
+                });
+            } else {
+                // mark event ready, but has no response callback
+                handle_info->handle = (Handle*)&handle_info->handle;
+            }
         }
         return result;
     }

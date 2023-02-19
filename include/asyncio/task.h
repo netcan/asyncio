@@ -109,12 +109,6 @@ struct Task: private NonCopyable {
         Task get_return_object() noexcept {
             return Task{coro_handle::from_promise(*this)};
         }
-        template<concepts::Awaitable A>
-        decltype(auto) await_transform(A&& awaiter, // for save source_location info
-                                       std::source_location loc = std::source_location::current()) {
-            frame_info_ = loc;
-            return std::forward<A>(awaiter);
-        }
 
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
         void run() final {

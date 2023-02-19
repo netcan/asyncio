@@ -44,24 +44,41 @@ public:
     }
 
     struct WaitEventAwaiter {
-        constexpr bool await_ready() const noexcept { return false; }
+        bool await_ready() noexcept {
+            bool ready = (event_.handle_info.handle == (const Handle*)&event_.handle_info.handle);
+            event_.handle_info.handle = nullptr;
+            return ready;
+        }
         template<typename Promise>
         constexpr void await_suspend(std::coroutine_handle<Promise> handle) noexcept {
             handle.promise().set_state(Handle::SUSPEND);
             event_.handle_info = {
                 .id = handle.promise().get_handle_id(),
-                .handle = &handle.promise()
+                .handle = &handle.promise() //< set callback
             };
-            selector_.register_event(event_);
+            if (! registered_) {
+                selector_.register_event(event_);
+                registered_ = true;
+            }
         }
-        void await_resume() noexcept { }
+        void await_resume() noexcept {
+            event_.handle_info = { }; //< reset callback
+        }
+
+        void destroy() noexcept {
+            if (registered_) {
+                selector_.remove_event(event_);
+                registered_ = false;
+            }
+        }
 
         ~WaitEventAwaiter() {
-            selector_.remove_event(event_);
+            destroy();
         }
 
         Selector& selector_;
-        Event event_;
+        Event event_ {};
+        bool registered_ { false };
     };
 
     [[nodiscard]]

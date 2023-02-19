@@ -134,7 +134,7 @@ Task<> handle_echo(Stream stream) {
     co_await stream.write(data);
 
     fmt::print("Close the connection\n");
-    stream.close(); // unneeded, just imitate python
+    stream.close(); // optional, close connection early
 }
 
 Task<> echo_server() {

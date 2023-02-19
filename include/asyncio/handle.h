@@ -36,8 +36,8 @@ protected:
 // don't directly using a raw pointer to track coroutine lifetime,
 // because a destroyed coroutine may has the same address as a new ready coroutine has created.
 struct HandleInfo {
-    HandleId id;
-    Handle* handle;
+    HandleId id { };
+    Handle* handle { };
 };
 
 struct CoroHandle: Handle {

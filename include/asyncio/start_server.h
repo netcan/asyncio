@@ -4,6 +4,7 @@
 
 #ifndef ASYNCIO_START_SERVER_H
 #define ASYNCIO_START_SERVER_H
+#include "fmt/core.h"
 #include <asyncio/asyncio_ns.h>
 #include <asyncio/stream.h>
 #include <asyncio/addrinfo_guard.h>
@@ -31,11 +32,12 @@ struct Server: NonCopyable {
     Task<void> serve_forever() {
         Event ev { .fd = fd_, .events = EPOLLIN };
         auto& loop = get_event_loop();
+        auto ev_awaiter = loop.wait_event(ev);
         std::list<ScheduledTask<Task<>>> connected;
         while (true) {
-            co_await loop.wait_event(ev);
             sockaddr_storage remoteaddr{};
             socklen_t addrlen = sizeof(remoteaddr);
+            co_await ev_awaiter;
             int clientfd = ::accept(fd_, reinterpret_cast<sockaddr*>(&remoteaddr), &addrlen);
             if (clientfd == -1) { continue; }
             connected.emplace_back(schedule_task(connect_cb_(Stream{clientfd, remoteaddr})));
@@ -49,6 +51,7 @@ private:
         if (connected.size() < 100) [[likely]] { return; }
         for (auto iter = connected.begin(); iter != connected.end(); ) {
             if (iter->done()) {
+                iter->get_result(); //< consume result, such as throw exception
                 iter = connected.erase(iter);
             } else {
                 ++iter;
