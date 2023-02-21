@@ -14,7 +14,44 @@
 #include <vector>
 #include <unistd.h>
 
+#if defined(__APPLE__) || defined(__CYGWIN__) || defined(__NetBSD__)
+    #ifndef SOCK_NONBLOCK /* __APPLE__: Protocol not supported */
+        #define SOCK_NONBLOCK 0
+    #endif
+    #include <sys/ioctl.h>
+    #include <fcntl.h>
+#endif
+
 ASYNCIO_NS_BEGIN
+namespace socket {
+    // Redesign python method `socket.setblocking(bool)`:
+    // https://github.com/python/cpython/blob/928752ce4c23f47d3175dd47ecacf08d86a99c9d/Modules/socketmodule.c#L683
+    // https://stackoverflow.com/a/1549344/14070318
+    bool set_blocking(int fd, bool blocking) {
+        if (fd < 0)
+            return false;
+    #if SOCK_NONBLOCK != 0
+        return true;
+    #elif defined(_WIN32)
+        unsigned long block = !blocking;
+        return !ioctlsocket(fd, FIONBIO, &block);
+    #elif __has_include(<sys/ioctl.h>) && defined(FIONBIO)
+        unsigned int block = !blocking;
+        return !ioctl(fd, FIONBIO, &block);
+    #else
+        int delay_flag, new_delay_flag;
+        delay_flag = fcntl(fd, F_GETFL, 0);
+        if (delay_flag == -1)
+            return false;
+        new_delay_flag = blocking ? (delay_flag & ~O_NONBLOCK) : (delay_flag | O_NONBLOCK);
+        if (new_delay_flag != delay_flag)
+            return !fcntl(fd, F_SETFL, new_delay_flag);
+        else
+            return false;
+    #endif
+    }
+}
+
 struct Stream: NonCopyable {
     using Buffer = std::vector<char>;
     Stream(int fd): read_fd_(fd), write_fd_(dup(fd)) {

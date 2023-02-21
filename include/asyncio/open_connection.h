@@ -51,9 +51,10 @@ Task<Stream> open_connection(std::string_view ip, uint16_t port) {
 
     int sockfd = -1;
     for (auto p = server_info; p != nullptr; p = p->ai_next) {
-        if ( (sockfd = socket(p->ai_family, p->ai_socktype | SOCK_NONBLOCK, p->ai_protocol)) == -1) {
+        if ((sockfd = ::socket(p->ai_family, p->ai_socktype | SOCK_NONBLOCK, p->ai_protocol)) == -1) {
             continue;
         }
+        socket::set_blocking(sockfd, false);
         if (co_await detail::connect(sockfd, p->ai_addr, p->ai_addrlen)) {
             break;
         }
