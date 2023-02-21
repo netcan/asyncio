@@ -132,8 +132,8 @@ private:
 private:
     int read_fd_{-1};
     int write_fd_{-1};
-    Event read_ev_ { .fd = read_fd_, .events = EPOLLIN };
-    Event write_ev_ { .fd = write_fd_, .events = EPOLLOUT };
+    Event read_ev_ { .fd = read_fd_, .flags = Event::Flags::EVENT_READ };
+    Event write_ev_ { .fd = write_fd_, .flags = Event::Flags::EVENT_WRITE };
     EventLoop::WaitEventAwaiter read_awaiter_ { get_event_loop().wait_event(read_ev_) };
     EventLoop::WaitEventAwaiter write_awaiter_ { get_event_loop().wait_event(write_ev_) };
     sockaddr_storage sock_info_{};

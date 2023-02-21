@@ -23,7 +23,7 @@ Task<bool> connect(int fd, const sockaddr *addr, socklen_t len) noexcept {
     if (rc < 0 && errno != EINPROGRESS) {
         throw std::system_error(std::make_error_code(static_cast<std::errc>(errno)));
     }
-    Event ev { .fd = fd, .events = EPOLLOUT };
+    Event ev { .fd = fd, .flags = Event::Flags::EVENT_WRITE };
     auto& loop = get_event_loop();
     co_await loop.wait_event(ev);
 
