@@ -3,6 +3,9 @@
 //
 #ifndef ASYNCIO_EVENT_LOOP_H
 #define ASYNCIO_EVENT_LOOP_H
+#define FMT_HEADER_ONLY
+#include <fmt/core.h>
+#include <fmt/format.h>
 #include <asyncio/handle.h>
 #include <asyncio/noncopyable.h>
 #include <asyncio/concept/future.h>
