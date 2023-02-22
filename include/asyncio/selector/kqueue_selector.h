@@ -17,7 +17,6 @@
 #include <ranges>
 #include <memory>
 
-using namespace std::chrono;
 
 ASYNCIO_NS_BEGIN
 struct KQueueSelector {
@@ -30,6 +29,7 @@ struct KQueueSelector {
 
     std::vector<Event> select(int timeout /* ms */) {
         errno = 0;
+        using namespace std::chrono;
         auto nsec = duration_cast<nanoseconds>(milliseconds{ timeout });
         const auto sec = duration_cast<seconds>(nsec);
         const timespec ts {
