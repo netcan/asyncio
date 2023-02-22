@@ -9,17 +9,18 @@
 #include <asyncio/selector/event.h>
 #include <asyncio/noncopyable.h>
 #include <asyncio/task.h>
+#include <sys/socket.h>
+#include <unistd.h>
 #include <netdb.h>
 #include <utility>
 #include <vector>
-#include <unistd.h>
 
 #if defined(__APPLE__) || defined(__CYGWIN__) || defined(__NetBSD__)
+    #include <sys/ioctl.h>
+    #include <fcntl.h>
     #ifndef SOCK_NONBLOCK /* __APPLE__: Protocol not supported */
         #define SOCK_NONBLOCK 0
     #endif
-    #include <sys/ioctl.h>
-    #include <fcntl.h>
 #endif
 
 ASYNCIO_NS_BEGIN
