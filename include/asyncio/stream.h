@@ -10,17 +10,15 @@
 #include <asyncio/noncopyable.h>
 #include <asyncio/task.h>
 #include <sys/socket.h>
+#include <sys/ioctl.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <netdb.h>
 #include <utility>
 #include <vector>
 
-#if defined(__APPLE__) || defined(__CYGWIN__) || defined(__NetBSD__)
-    #include <sys/ioctl.h>
-    #include <fcntl.h>
-    #ifndef SOCK_NONBLOCK /* __APPLE__: Protocol not supported */
-        #define SOCK_NONBLOCK 0
-    #endif
+#ifndef SOCK_NONBLOCK /* If Protocol not supported */
+    #define SOCK_NONBLOCK 0
 #endif
 
 ASYNCIO_NS_BEGIN
@@ -31,25 +29,27 @@ namespace socket {
     bool set_blocking(int fd, bool blocking) {
         if (fd < 0)
             return false;
-    #if SOCK_NONBLOCK != 0
-        return true;
-    #elif defined(_WIN32)
-        unsigned long block = !blocking;
-        return !ioctlsocket(fd, FIONBIO, &block);
-    #elif __has_include(<sys/ioctl.h>) && defined(FIONBIO)
-        unsigned int block = !blocking;
-        return !ioctl(fd, FIONBIO, &block);
-    #else
-        int delay_flag, new_delay_flag;
-        delay_flag = fcntl(fd, F_GETFL, 0);
-        if (delay_flag == -1)
-            return false;
-        new_delay_flag = blocking ? (delay_flag & ~O_NONBLOCK) : (delay_flag | O_NONBLOCK);
-        if (new_delay_flag != delay_flag)
-            return !fcntl(fd, F_SETFL, new_delay_flag);
-        else
-            return false;
-    #endif
+        if constexpr (SOCK_NONBLOCK != 0) {
+            return true;
+        } else {
+        #if defined(_WIN32)
+            unsigned long block = !blocking;
+            return !ioctlsocket(fd, FIONBIO, &block);
+        #elif __has_include(<sys/ioctl.h>) && defined(FIONBIO)
+            unsigned int block = !blocking;
+            return !ioctl(fd, FIONBIO, &block);
+        #else
+            int delay_flag, new_delay_flag;
+            delay_flag = fcntl(fd, F_GETFL, 0);
+            if (delay_flag == -1)
+                return false;
+            new_delay_flag = blocking ? (delay_flag & ~O_NONBLOCK) : (delay_flag | O_NONBLOCK);
+            if (new_delay_flag != delay_flag)
+                return !fcntl(fd, F_SETFL, new_delay_flag);
+            else
+                return false;
+        #endif
+        }
     }
 }
 
