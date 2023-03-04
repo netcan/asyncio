@@ -30,7 +30,7 @@ struct Server: NonCopyable {
     ~Server() { close(); }
 
     Task<void> serve_forever() {
-        Event ev { .fd = fd_, .events = EPOLLIN };
+        Event ev { .fd = fd_, .flags = Event::Flags::EVENT_READ };
         auto& loop = get_event_loop();
         auto ev_awaiter = loop.wait_event(ev);
         std::list<ScheduledTask<Task<>>> connected;
@@ -84,9 +84,10 @@ Task<Server<CONNECT_CB>> start_server(CONNECT_CB cb, std::string_view ip, uint16
 
     int serverfd = -1;
     for (auto p = server_info; p != nullptr; p = p->ai_next) {
-        if ( (serverfd = socket(p->ai_family, p->ai_socktype | SOCK_NONBLOCK, p->ai_protocol)) == -1) {
+        if ((serverfd = ::socket(p->ai_family, p->ai_socktype | SOCK_NONBLOCK, p->ai_protocol)) == -1) {
             continue;
         }
+        socket::set_blocking(serverfd, false);
         int yes = 1;
         // lose the pesky "address already in use" error message
         setsockopt(serverfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));

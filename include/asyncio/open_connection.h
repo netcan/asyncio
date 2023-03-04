@@ -23,7 +23,7 @@ Task<bool> connect(int fd, const sockaddr *addr, socklen_t len) noexcept {
     if (rc < 0 && errno != EINPROGRESS) {
         throw std::system_error(std::make_error_code(static_cast<std::errc>(errno)));
     }
-    Event ev { .fd = fd, .events = EPOLLOUT };
+    Event ev { .fd = fd, .flags = Event::Flags::EVENT_WRITE };
     auto& loop = get_event_loop();
     co_await loop.wait_event(ev);
 
@@ -51,9 +51,10 @@ Task<Stream> open_connection(std::string_view ip, uint16_t port) {
 
     int sockfd = -1;
     for (auto p = server_info; p != nullptr; p = p->ai_next) {
-        if ( (sockfd = socket(p->ai_family, p->ai_socktype | SOCK_NONBLOCK, p->ai_protocol)) == -1) {
+        if ((sockfd = ::socket(p->ai_family, p->ai_socktype | SOCK_NONBLOCK, p->ai_protocol)) == -1) {
             continue;
         }
+        socket::set_blocking(sockfd, false);
         if (co_await detail::connect(sockfd, p->ai_addr, p->ai_addrlen)) {
             break;
         }

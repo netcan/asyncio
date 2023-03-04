@@ -42,14 +42,14 @@ struct EpollSelector {
     }
     bool is_stop() { return register_event_count_ == 1; }
     void register_event(const Event& event) {
-        epoll_event ev{ .events = event.events, .data {.ptr = const_cast<HandleInfo*>(&event.handle_info) } };
+        epoll_event ev{ .events = event.flags, .data {.ptr = const_cast<HandleInfo*>(&event.handle_info) } };
         if (epoll_ctl(epfd_, EPOLL_CTL_ADD, event.fd, &ev) == 0) {
             ++register_event_count_;
         }
     }
 
     void remove_event(const Event& event) {
-        epoll_event ev{ .events = event.events };
+        epoll_event ev{ .events = event.flags };
         if (epoll_ctl(epfd_, EPOLL_CTL_DEL, event.fd, &ev) == 0) {
             --register_event_count_;
         }
