@@ -6,7 +6,7 @@
 #define ASYNCIO_OPEN_CONNECTION_H
 #include <asyncio/asyncio_ns.h>
 #include <asyncio/stream.h>
-#include <asyncio/addrinfo_guard.h>
+#include <asyncio/finally.h>
 #include <asyncio/selector/event.h>
 #include <exception>
 #include <asyncio/task.h>
@@ -47,7 +47,7 @@ Task<Stream> open_connection(std::string_view ip, uint16_t port) {
             rv != 0) {
         throw std::system_error(std::make_error_code(std::errc::address_not_available));
     }
-    AddrInfoGuard _i(server_info);
+    finally{ freeaddrinfo(server_info); };
 
     int sockfd = -1;
     for (auto p = server_info; p != nullptr; p = p->ai_next) {

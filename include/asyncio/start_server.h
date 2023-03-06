@@ -7,7 +7,7 @@
 #include "fmt/core.h"
 #include <asyncio/asyncio_ns.h>
 #include <asyncio/stream.h>
-#include <asyncio/addrinfo_guard.h>
+#include <asyncio/finally.h>
 #include <asyncio/schedule_task.h>
 #include <list>
 #include <sys/types.h>
@@ -80,7 +80,7 @@ Task<Server<CONNECT_CB>> start_server(CONNECT_CB cb, std::string_view ip, uint16
             rv != 0) {
         throw std::system_error(std::make_error_code(std::errc::address_not_available));
     }
-    AddrInfoGuard _i(server_info);
+    finally{ freeaddrinfo(server_info); };
 
     int serverfd = -1;
     for (auto p = server_info; p != nullptr; p = p->ai_next) {
