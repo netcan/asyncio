@@ -39,7 +39,7 @@ set(ASYNCIO_INC
         include/asyncio/open_connection.h
         include/asyncio/stream.h
         include/asyncio/start_server.h
-        include/asyncio/addrinfo_guard.h
+        include/asyncio/finally.h
         )
 
 include_directories(${CMAKE_SOURCE_DIR}/include)
