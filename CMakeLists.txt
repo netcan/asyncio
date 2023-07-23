@@ -44,15 +44,14 @@ add_library(asyncio SHARED
         ${ASYNC_INC}
         src/event_loop.cpp)
 
-find_package(fmt REQUIRED)
-target_link_libraries(asyncio PUBLIC fmt::fmt)
-
 if (BUILD_TESTING)
     add_subdirectory(test)
     add_subdirectory(third_party)
 endif()
 
 include(GNUInstallDirs)
+
+find_package(fmt)
 
 set_target_properties(${PROJECT_NAME}
 PROPERTIES
@@ -62,9 +61,13 @@ PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}"
 )
 
+target_compile_options(${PROJECT_NAME} PUBLIC -fPIC)
+
 target_include_directories(${PROJECT_NAME} PUBLIC
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>)
+
+target_link_libraries(asyncio PUBLIC fmt::fmt)
 
 install(
     DIRECTORY ${CMAKE_SOURCE_DIR}/include/asyncio
@@ -80,6 +83,3 @@ install(EXPORT ${TARGET_NAME}Targets
     FILE ${TARGET_NAME}Config.cmake
     NAMESPACE ${TARGET_NAME}::
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/asyncio)
-
-# target_compile_definitions(${PROJECT_NAME} PUBLIC ${compile_definition})
-target_compile_options(${PROJECT_NAME} PUBLIC -fPIC)
