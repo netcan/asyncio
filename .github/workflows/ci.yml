@@ -9,6 +9,8 @@ jobs:
         uses: egor-tensin/setup-gcc@v1
         with:
           version: 11
+      - name: install libfmt-dev
+        run: sudo apt-get install -y libfmt-dev
 
       - uses: actions/checkout@master
         with:
