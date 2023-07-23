@@ -9,6 +9,8 @@ jobs:
         uses: egor-tensin/setup-gcc@v1
         with:
           version: 11
+      - name: install libfmt-dev
+        run: sudo apt-get install -y libfmt-dev
 
       - uses: actions/checkout@master
         with:
@@ -17,7 +19,7 @@ jobs:
       - name: build
         run: |
           mkdir build-debug
-          cmake -H. -Bbuild-debug -DCMAKE_BUILD_TYPE=Debug
+          cmake -H. -Bbuild-debug -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON
           cmake --build build-debug -j
       - name: test
         run: ./build-debug/test/ut/asyncio_ut

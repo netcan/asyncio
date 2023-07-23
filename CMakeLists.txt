@@ -7,13 +7,11 @@ project(${TARGET_NAME}
 
 set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
 set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
-message(CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE})
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-###############################################################################
 set(ASYNCIO_INC
         include/asyncio/asyncio_ns.h
         include/asyncio/task.h
@@ -42,21 +40,19 @@ set(ASYNCIO_INC
         include/asyncio/finally.h
         )
 
-include_directories(${CMAKE_SOURCE_DIR}/include)
 add_library(asyncio SHARED
         ${ASYNC_INC}
         src/event_loop.cpp)
-target_link_libraries(asyncio PUBLIC fmt::fmt)
 
-add_subdirectory(test)
-add_subdirectory(third_party)
+if (BUILD_TESTING)
+    add_subdirectory(third_party/Catch2)
+    add_subdirectory(third_party/nanobench)
+    add_subdirectory(test)
+endif()
 
-set(MODELS_CMAKE_FILES
-    "cmake/asyncioConfig.cmake"
-    "cmake/asyncioConfigVersion.cmake"
-)
+include(GNUInstallDirs)
 
-add_compile_options(-fPIC)
+find_package(fmt REQUIRED)
 
 set_target_properties(${PROJECT_NAME}
 PROPERTIES
@@ -66,20 +62,25 @@ PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}"
 )
 
-set(MODELS_LIBRARY_INSTALL_DIR "/usr/lib/")
-set(MODELS_CMAKE_FILES_INSTALL_DIR  "/usr/lib/cmake/asyncio/")
-set(MODELS_HEADER_INSTALL_DIR  "/usr/")
+target_compile_options(${PROJECT_NAME} PUBLIC -fPIC)
 
-# INSTALL CONFIGURATIONS
-include(GNUInstallDirs)
+target_include_directories(${PROJECT_NAME} PUBLIC
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>)
 
-foreach ( file ${ASYNCIO_INC} )
-    get_filename_component( dir ${file} DIRECTORY )
-    install( FILES ${file} DESTINATION "${MODELS_HEADER_INSTALL_DIR}${dir}")
-endforeach()
+target_link_libraries(asyncio PUBLIC fmt::fmt)
 
-install(TARGETS ${TARGET_NAME}
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+install(
+    DIRECTORY ${CMAKE_SOURCE_DIR}/include/asyncio
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
 
-install(FILES ${MODELS_CMAKE_FILES}
-    DESTINATION ${MODELS_CMAKE_FILES_INSTALL_DIR})    
+install(TARGETS ${TARGET_NAME} EXPORT ${TARGET_NAME}Targets
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+    RUNTIME DESTINATION bin)
+
+install(EXPORT ${TARGET_NAME}Targets
+    FILE ${TARGET_NAME}Config.cmake
+    NAMESPACE ${TARGET_NAME}::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/asyncio)
