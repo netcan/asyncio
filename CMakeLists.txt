@@ -45,13 +45,14 @@ add_library(asyncio SHARED
         src/event_loop.cpp)
 
 if (BUILD_TESTING)
+    add_subdirectory(third_party/Catch2)
+    add_subdirectory(third_party/nanobench)
     add_subdirectory(test)
-    add_subdirectory(third_party)
 endif()
 
 include(GNUInstallDirs)
 
-find_package(fmt)
+find_package(fmt REQUIRED)
 
 set_target_properties(${PROJECT_NAME}
 PROPERTIES
