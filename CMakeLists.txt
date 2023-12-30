@@ -40,9 +40,16 @@ set(ASYNCIO_INC
         include/asyncio/finally.h
         )
 
-add_library(asyncio SHARED
-        ${ASYNC_INC}
-        src/event_loop.cpp)
+if(BUILD_SHARED_LIBS)
+    add_library(asyncio SHARED
+            ${ASYNC_INC}
+            src/event_loop.cpp)
+else()
+    add_library(asyncio STATIC 
+            ${ASYNC_INC}
+            src/event_loop.cpp)
+endif(BUILD_SHARED_LIBS)
+
 
 if (BUILD_TESTING)
     add_subdirectory(third_party/Catch2)
